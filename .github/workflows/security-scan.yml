@@ -1,0 +1,114 @@
+name: Security Scan
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  sca:
+    name: Trivy scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      # audit-only: logs egress but does not block it (same for every
+      # harden-runner step in this file).
+      # TODO: switch to egress-policy: block with allowed-endpoints list later.
+      - name: Harden runner
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Gate: fails the job on HIGH/CRITICAL findings only. The SARIF
+      # run below still reports every severity (LOW to CRITICAL), so
+      # lower-severity findings are never silently ignored.
+      # scan-ref: . — no lockfile today; Trivy will pick up
+      # lambda/package-lock.json when it appears (phase 3).
+      - name: Run Trivy (gate on HIGH/CRITICAL)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: 1
+
+      # Audit-only: generates a SARIF with all findings (LOW to
+      # CRITICAL) so the full audit is available even when the gate
+      # above fails on HIGH/CRITICAL.
+      - name: Run Trivy (SARIF, all severities)
+        if: always()
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          format: sarif
+          output: trivy.sarif
+          severity: LOW,MEDIUM,HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: 0
+
+      - name: Upload SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
+        with:
+          sarif_file: trivy.sarif
+          category: trivy
+
+  sast:
+    name: Semgrep scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Cache Semgrep venv
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /tmp/semgrep-venv
+          key: semgrep-venv-${{ runner.os }}-1.172.0
+
+      - name: Install Semgrep
+        run: |
+          if [ ! -x /tmp/semgrep-venv/bin/semgrep ]; then
+            python3 -m venv /tmp/semgrep-venv
+            /tmp/semgrep-venv/bin/pip install --upgrade pip
+            /tmp/semgrep-venv/bin/pip install semgrep==1.172.0
+          fi
+
+      # Audit-only: the job never blocks the PR, all findings are
+      # reported in the SARIF.
+      # TODO: fail on HIGH/CRITICAL once the current findings are fixed.
+      - name: Run Semgrep
+        continue-on-error: true
+        run: /tmp/semgrep-venv/bin/semgrep --config=auto --sarif --output=semgrep.sarif .
+
+      - name: Upload SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
