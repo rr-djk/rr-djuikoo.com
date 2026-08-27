@@ -32,7 +32,7 @@ jobs:
       # run below still reports every severity (LOW to CRITICAL), so
       # lower-severity findings are never silently ignored.
       # scan-ref: . — no lockfile today; Trivy will pick up
-      # lambda/package-lock.json when it appears (phase 3).
+      # lambda/package-lock.json when it appears.
       - name: Run Trivy (gate on HIGH/CRITICAL)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
@@ -112,3 +112,32 @@ jobs:
         with:
           sarif_file: semgrep.sarif
           category: semgrep
+
+  secrets:
+    name: Gitleaks scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      # Gate: fails the job if a secret is found.
+      # GITLEAKS_LICENSE is not required on a personal account.
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_VERSION: "8.30.1"
+          GITLEAKS_ENABLE_COMMENTS: "false"
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
