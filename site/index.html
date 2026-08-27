@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title><!-- TODO(contenu): Nom Prénom — Titre/Rôle -->Ton Nom — Ton Titre</title>
+<meta name="description" content="<!-- TODO(contenu): une phrase de description pour le SEO -->">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ============================================= -->
+  <!-- PANNEAU PRINCIPAL — 70% — contenu personnel     -->
+  <!-- ============================================= -->
+  <main class="main-panel">
+
+    <header class="hero">
+      <p class="eyebrow"><!-- TODO(contenu): ex. "Développeur · Montréal" -->[Localisation / accroche courte]</p>
+      <h1 class="hero-name"><!-- TODO(contenu): Nom complet -->[Prénom Nom]</h1>
+      <p class="hero-title"><!-- TODO(contenu): titre / rôle -->[Titre professionnel]</p>
+      <p class="hero-bio">
+        <!-- TODO(contenu): bio courte, 2-3 phrases -->
+        [Bio courte — qui tu es, ce que tu fais, ce qui t'intéresse.]
+      </p>
+    </header>
+
+    <nav class="section-nav" aria-label="Navigation des sections">
+      <a href="#about">À propos</a>
+      <a href="#projects">Projets</a>
+      <a href="#experience">Expérience</a>
+      <a href="#contact">Contact</a>
+    </nav>
+
+    <section id="about" class="section">
+      <h2 class="section-title">À propos</h2>
+      <div class="section-body">
+        <!-- TODO(contenu): paragraphe(s) de présentation détaillée -->
+        <p>[Paragraphe À propos — remplace ce texte par ta présentation détaillée.]</p>
+      </div>
+    </section>
+
+    <section id="projects" class="section">
+      <h2 class="section-title">Projets</h2>
+      <div class="section-body">
+        <!-- TODO(contenu): dupliquer .project-card pour chaque projet -->
+        <article class="project-card">
+          <div class="project-card-header">
+            <h3>[Nom du projet]</h3>
+            <a href="#" class="project-link">[Lien →]</a>
+          </div>
+          <p>[Description courte du projet — 1 à 2 phrases.]</p>
+          <ul class="tag-list">
+            <li>[Techno]</li>
+            <li>[Techno]</li>
+          </ul>
+        </article>
+
+        <article class="project-card">
+          <div class="project-card-header">
+            <h3>[Nom du projet]</h3>
+            <a href="#" class="project-link">[Lien →]</a>
+          </div>
+          <p>[Description courte du projet — 1 à 2 phrases.]</p>
+          <ul class="tag-list">
+            <li>[Techno]</li>
+            <li>[Techno]</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section id="experience" class="section">
+      <h2 class="section-title">Expérience</h2>
+      <div class="section-body">
+        <!-- TODO(contenu): dupliquer .experience-item pour chaque poste/formation -->
+        <div class="experience-item">
+          <div class="experience-dates">[AAAA — AAAA]</div>
+          <div class="experience-content">
+            <h3>[Poste / Formation]</h3>
+            <p class="experience-org">[Entreprise / Établissement]</p>
+            <p>[Description courte du rôle ou des réalisations.]</p>
+          </div>
+        </div>
+
+        <div class="experience-item">
+          <div class="experience-dates">[AAAA — AAAA]</div>
+          <div class="experience-content">
+            <h3>[Poste / Formation]</h3>
+            <p class="experience-org">[Entreprise / Établissement]</p>
+            <p>[Description courte du rôle ou des réalisations.]</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="contact" class="section">
+      <h2 class="section-title">Contact</h2>
+      <div class="section-body">
+        <ul class="contact-list">
+          <!-- TODO(contenu): remplacer les liens par tes vrais profils/emails -->
+          <li><a href="mailto:ton@email.com">[ton@email.com]</a></li>
+          <li><a href="#" target="_blank" rel="noopener">[LinkedIn →]</a></li>
+          <li><a href="#" target="_blank" rel="noopener">[GitHub →]</a></li>
+        </ul>
+      </div>
+    </section>
+
+    <footer class="main-footer">
+      <p>© <span id="year"></span> <!-- TODO(contenu): ton nom -->[Ton Nom]</p>
+    </footer>
+
+  </main>
+
+  <!-- ============================================= -->
+  <!-- PANNEAU CHAT — 30% — agent IA                   -->
+  <!-- ============================================= -->
+  <aside class="chat-panel" aria-label="Assistant conversationnel">
+
+    <div class="chat-body" id="chat-body">
+      <div class="chat-empty-state">
+        <div class="chat-empty-avatar" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="4" y="8" width="16" height="13" rx="4" stroke="currentColor" stroke-width="1.4"/>
+            <line x1="12" y1="8" x2="12" y2="4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+            <circle cx="12" cy="3" r="1.2" fill="currentColor"/>
+            <circle cx="9" cy="14.5" r="1" fill="currentColor"/>
+            <circle cx="15" cy="14.5" r="1" fill="currentColor"/>
+            <path d="M9.5 17.5C10.2 18.2 13.8 18.2 14.5 17.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <!-- TODO(contenu): message d'accueil -->
+        <p>Bonjour, je suis Wags, Directeur des opérations de ce portfolio.</p>
+        <p>Mon rôle : te faire gagner du temps.</p>
+        <p>Questions sur le parcours, les projets ou les compétences de mon employeur ? <strong>Je te réponds directement, clairement.</strong></p>
+      </div>
+      <!-- Les messages du chat seront injectés ici dynamiquement par js/main.js -->
+    </div>
+
+    <div class="chat-input-bar">
+      <form id="chat-form" autocomplete="off">
+        <input
+          type="text"
+          id="chat-input"
+          placeholder="Pose ta question à Wags"
+          aria-label="Ton message"
+        >
+        <button type="submit" aria-label="Envoyer">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 19V5M12 5L6 11M12 5L18 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </form>
+    </div>
+
+  </aside>
+
+</div>
+
+<script src="js/main.js"></script>
+</body>
+</html>
