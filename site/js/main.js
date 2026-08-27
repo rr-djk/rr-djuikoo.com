@@ -4,13 +4,14 @@
 document.getElementById('year').textContent = new Date().getFullYear();
 
 // ==========================================================
-// CHAT — squelette prêt à brancher sur la Lambda / Bedrock
-//
-// TODO(dev): remplacer AGENT_ENDPOINT par l'URL de ta Lambda
-// Function URL une fois déployée (ex: via Terraform, output
-// `lambda_function_url`).
+// CHAT — appelle la Lambda /api/chat via CloudFront
 // ==========================================================
-const AGENT_ENDPOINT = ''; // TODO(dev): 'https://xxxxxxxx.lambda-url.us-east-1.on.aws/'
+
+// A random ID for this conversation, sent with every message. The browser
+// holds only this ticket — where the conversation lives is up to your agent.
+const sessionId = crypto.randomUUID();
+
+const AGENT_ENDPOINT = '/api/chat';
 
 const chatForm = document.getElementById('chat-form');
 const chatInput = document.getElementById('chat-input');
@@ -18,7 +19,6 @@ const chatBody = document.getElementById('chat-body');
 const emptyState = document.querySelector('.chat-empty-state');
 
 function appendMessage(role, text) {
-  // Retire l'état vide dès le premier message
   if (emptyState) emptyState.remove();
 
   const el = document.createElement('div');
@@ -29,6 +29,14 @@ function appendMessage(role, text) {
   return el;
 }
 
+// Remplit la bulle agent à partir de la réponse de la Lambda.
+// Aujourd'hui : réponse JSON simple.
+// Plus tard : lecture NDJSON du stream token-par-token.
+async function readReply(targetEl, response) {
+  const data = await response.json();
+  targetEl.textContent = data.reply ?? '[Namespace] Réponse vide de l\'agent.';
+}
+
 chatForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const message = chatInput.value.trim();
@@ -37,29 +45,20 @@ chatForm.addEventListener('submit', async (e) => {
   appendMessage('user', message);
   chatInput.value = '';
 
-  // TODO(dev): tant que AGENT_ENDPOINT n'est pas configuré,
-  // on affiche un message de statut plutôt que d'appeler une URL vide.
-  if (!AGENT_ENDPOINT) {
-    appendMessage('agent', "[Namespace] L'agent n'est pas encore connecté — branche AGENT_ENDPOINT dans js/main.js.");
-    return;
-  }
-
   const agentMessageEl = appendMessage('agent', '');
 
   try {
-    // TODO(dev): adapter le payload au format attendu par ta Lambda
     const response = await fetch(AGENT_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, sessionId }),
     });
 
-    // TODO(dev): si la Lambda Function URL est en mode
-    // RESPONSE_STREAM, lire response.body via un ReadableStream
-    // ici pour afficher le texte au fur et à mesure plutôt
-    // qu'en un seul bloc.
-    const data = await response.json();
-    agentMessageEl.textContent = data.reply ?? '[Namespace] Réponse vide de l\'agent.';
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    await readReply(agentMessageEl, response);
   } catch (err) {
     agentMessageEl.textContent = "[Namespace] Erreur lors de l'appel à l'agent.";
     console.error(err);
