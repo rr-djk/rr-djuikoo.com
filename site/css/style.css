@@ -146,6 +146,13 @@ input:focus-visible {
 .section {
   margin-bottom: 56px;
   scroll-margin-top: 24px;
+  padding-top: 40px;
+  border-top: 3px solid #000;
+}
+
+.section:first-of-type {
+  border-top: none;
+  padding-top: 0;
 }
 
 .section-title {
@@ -209,17 +216,24 @@ input:focus-visible {
 
 /* Expérience */
 .experience-item {
-  display: grid;
-  grid-template-columns: 120px 1fr;
-  gap: 20px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
   padding: 20px 0;
   border-bottom: 1px solid var(--border);
 }
 .experience-item:last-child { border-bottom: none; }
 
+.experience-content {
+  flex: 1;
+  min-width: 0;
+}
+
 .experience-dates {
   font-size: 13px;
   color: var(--text-muted);
+  white-space: nowrap;
   padding-top: 2px;
 }
 
@@ -237,9 +251,32 @@ input:focus-visible {
 
 @media (max-width: 560px) {
   .experience-item {
-    grid-template-columns: 1fr;
+    flex-direction: column;
     gap: 4px;
   }
+}
+
+/* Certifications */
+.cert-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+.cert-item:last-child { border-bottom: none; }
+
+.cert-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.cert-meta {
+  font-size: 13px;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 /* Contact */
