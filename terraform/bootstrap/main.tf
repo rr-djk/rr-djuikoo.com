@@ -1,16 +1,12 @@
 # Remote state backend store.
 #
-# This config is applied once, on its own, to create the bucket that every other
-# Terraform config in this repo uses as its S3 backend. It is deliberately kept
-# separate from the application stack and from the static-site bucket
-# (rr-djuikoo-site): the site bucket may be destroyed and recreated freely during
-# development without ever putting the state at risk.
-#
-# State locking is handled by the native S3 lockfile (use_lockfile), so there is
-# no DynamoDB table here.
+# Applied once, on its own, to create the bucket every other Terraform config in
+# this repo uses as its S3 backend. Kept separate from the application stack so
+# the app's buckets can be destroyed and recreated freely without risking state.
+# Locking is the native S3 lockfile (use_lockfile).
 
 resource "aws_s3_bucket" "tf_state" {
-  bucket = "rr-djuikoo-tf-state"
+  bucket = var.state_bucket_name
 
   # The state history lives here; never let Terraform delete this bucket.
   lifecycle {

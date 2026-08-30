@@ -5,6 +5,7 @@ node_modules/
 .env
 
 # Terraform
+# terraform.tfvars is committed on purpose (public repo, no secret values).
 .terraform/
 *.tfstate
 *.tfstate.*
