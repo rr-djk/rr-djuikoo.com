@@ -184,7 +184,7 @@ jobs:
         with:
           directory: terraform
           framework: terraform
-          # config_file: .checkov.yml
+          config_file: .checkov.yml
           quiet: true
           # soft_fail set to true to prevent pipeline failure when security issues
           # are found.
