@@ -2,7 +2,10 @@
 
 Portfolio personnel avec panneau chat (agent **Wags**). Le site présente parcours, projets et certifications ; le chat répondra ensuite via une Lambda AWS + Bedrock.
 
-> État actuel : frontend statique fonctionnel en local. Pas de backend ni d'infra déployée (`terraform/` vide, pas de `lambda/`). Le README sera enrichi à chaque jalon.
+> État actuel : frontend statique fonctionnel en local. L'IaC Terraform est amorcée
+> (bucket d'état S3 `rr-djuikoo-tf-state`, backends S3 configurés) mais aucune
+> ressource applicative n'est encore déployée (pas de `lambda/`). Le README sera
+> enrichi à chaque jalon.
 
 ## Prérequis
 
@@ -30,7 +33,9 @@ site/              # frontend vanilla — pas de build step
   index.html       # 70% contenu (À propos, Projets, Études, Expérience, Certifications, Contact)
   css/style.css    # tokens CSS, responsive, panneau chat 30% (#F5F0E1 / #1F4D2C)
   js/main.js       # year + chat (/api/chat, sessionId par visite, readReply)
-terraform/         # vide — IaC prévue (S3, CloudFront, Lambda, Bedrock)
+terraform/
+  bootstrap/       # config du bucket d'état Terraform (rr-djuikoo-tf-state) - state sur S3
+  *.tf             # stack applicative - backend S3, pas encore de ressource (S3, CloudFront, Lambda, Bedrock à venir)
 Makefile           # cible serve
 ```
 
@@ -38,12 +43,12 @@ Le chat appelle `POST /api/chat` (`{ message, sessionId }`). Sans backend, la r�
 
 ## Stack vérifiée
 
-| Couche        | Techno                                                                                               |
-| ------------- | ---------------------------------------------------------------------------------------------------- |
-| Frontend      | HTML/CSS/JS vanilla, Google Fonts Lora + Inter                                                       |
-| Serveur local | `python3 -m http.server` via `make serve`                                                            |
-| Qualité       | pre-commit (prettier, tflint), gitleaks                                                              |
-| CI            | GitHub Actions `Security Scan` sur PR → `main` (Trivy HIGH/CRITICAL gate + SARIF, Semgrep, Gitleaks) |
+| Couche        | Techno                                                                                                                           |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Frontend      | HTML/CSS/JS vanilla, Google Fonts Lora + Inter                                                                                   |
+| Serveur local | `python3 -m http.server` via `make serve`                                                                                        |
+| Qualité       | pre-commit (prettier, tflint), gitleaks                                                                                          |
+| CI            | GitHub Actions `Security Scan` sur PR → `main` (Trivy HIGH/CRITICAL gate + SARIF, Semgrep, Gitleaks, Checkov sur `terraform/**`) |
 
 Pas de `package.json`, pas de dépendances npm côté frontend. Le dossier `site/` contient 14 `TODO(content)` à remplir (contenu placeholder).
 

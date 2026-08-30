@@ -1,0 +1,20 @@
+# Checkov config: assumed skips for the bootstrap state bucket.
+# NOTE: global skips on terraform/ — re-evaluate when terraform/main.tf
+# adds the site bucket: logging/replication might become relevant.
+
+framework: terraform
+quiet: true
+
+skip-check:
+  # Single-region by design (us-east-1 everywhere)
+  - CKV_AWS_144
+
+  # No S3 event workflow on the state bucket, no security value.
+  - CKV2_AWS_62
+
+  # Low forensic risk: private bucket, non-listable, write access restricted to me only.
+  - CKV_AWS_18
+
+  # AES256 (SSE-S3) assumed, free, sufficient as long as the state holds no secrets.
+  # KMS CMK = ~$1/month + policy maintenance, to reconsider if secrets are stored in state.
+  - CKV_AWS_145
