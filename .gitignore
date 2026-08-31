@@ -18,5 +18,5 @@ override.tf.json
 *_override.tf.json
 .terraform.tfstate.lock.info
 
-# Lambda build artefact
-lambda.zip
+# Agent build artefact
+agent.zip
