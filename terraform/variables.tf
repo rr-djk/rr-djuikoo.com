@@ -33,3 +33,9 @@ variable "rate_limit_table_name" {
   type        = string
   default     = "rr-djuikoo-chat-rate-limit"
 }
+
+variable "bedrock_model_id" {
+  description = "Bedrock foundation model ID for the chat agent."
+  type        = string
+  default     = "global.anthropic.claude-haiku-4-5-20251001-v1:0"
+}
