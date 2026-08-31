@@ -32,3 +32,9 @@ skip-check:
   # NOTE: Decision to be revisited once app is functional and observability justifies
   # cost/overhead.
   - CKV_AWS_50
+
+  # Access logs deferred - no traffic yet; revisit when site goes live.
+  - CKV_AWS_33
+
+  # Public personal site - no geo restriction needed.
+  - CKV2_AWS_26
