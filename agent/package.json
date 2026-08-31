@@ -2,5 +2,9 @@
   "name": "rr-djuikoo-chat",
   "version": "0.1.0",
   "type": "module",
-  "description": "Wags chat stub - infra only (echo)"
+  "description": "Wags chat stub - infra only (echo + rate-limit)",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.700.0",
+    "@aws-sdk/lib-dynamodb": "^3.700.0"
+  }
 }
