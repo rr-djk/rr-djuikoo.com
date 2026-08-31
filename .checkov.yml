@@ -18,3 +18,7 @@ skip-check:
   # AES256 (SSE-S3) assumed, free, sufficient as long as the state holds no secrets.
   # KMS CMK = ~$1/month + policy maintenance, to reconsider if secrets are stored in state.
   - CKV_AWS_145
+
+  # Ephemeral session data with low recovery business value; disabled to minimize
+  # ongoing AWS storage costs.
+  - CKV_AWS_28
