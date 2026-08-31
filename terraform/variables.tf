@@ -9,3 +9,27 @@ variable "project_name" {
   type        = string
   default     = "rr-djuikoo.com"
 }
+
+variable "site_bucket_name" {
+  description = "Name of the S3 bucket that hosts the static site."
+  type        = string
+  default     = "rr-djuikoo-site"
+}
+
+variable "artifact_bucket_name" {
+  description = "Name of the S3 bucket that stores Lambda deployment artefacts."
+  type        = string
+  default     = "rr-djuikoo-lambda-artifacts"
+}
+
+variable "sessions_table_name" {
+  description = "Name of the DynamoDB table that stores chat sessions."
+  type        = string
+  default     = "rr-djuikoo-sessions"
+}
+
+variable "rate_limit_table_name" {
+  description = "Name of the DynamoDB table used for chat rate limiting."
+  type        = string
+  default     = "rr-djuikoo-chat-rate-limit"
+}
