@@ -22,3 +22,13 @@ skip-check:
   # Ephemeral session data with low recovery business value; disabled to minimize
   # ongoing AWS storage costs.
   - CKV_AWS_28
+
+  # Synchronous Lambda (Function URL RESPONSE_STREAM): errors are returned
+  # directly to the client, no async message to replay via DLQ.
+  - CKV_AWS_116
+
+  # X-Ray tracing on Lambda deferred - infra-only stub, no downstream Bedrock/DynamoDB
+  # tracing needed yet.
+  # NOTE: Decision to be revisited once app is functional and observability justifies
+  # cost/overhead.
+  - CKV_AWS_50
