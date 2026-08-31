@@ -30,12 +30,13 @@ data "aws_cloudfront_response_headers_policy" "security_headers" {
 }
 
 resource "aws_cloudfront_distribution" "main" {
-  enabled         = true
-  is_ipv6_enabled = true
-  comment         = "rr-djuikoo.com"
-  price_class     = "PriceClass_100"
-  http_version    = "http2and3"
-  aliases         = [var.domain_name, "www.${var.domain_name}"]
+  enabled             = true
+  is_ipv6_enabled     = true
+  comment             = "rr-djuikoo.com"
+  price_class         = "PriceClass_100"
+  http_version        = "http2and3"
+  aliases             = [var.domain_name, "www.${var.domain_name}"]
+  default_root_object = "index.html"
 
   origin {
     domain_name              = aws_s3_bucket.site.bucket_regional_domain_name
