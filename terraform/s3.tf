@@ -51,38 +51,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "site" {
   }
 }
 
-data "aws_iam_policy_document" "site" {
-  statement {
-    sid    = "DenyInsecureTransport"
-    effect = "Deny"
-
-    principals {
-      type        = "*"
-      identifiers = ["*"]
-    }
-
-    actions = ["s3:*"]
-
-    resources = [
-      aws_s3_bucket.site.arn,
-      "${aws_s3_bucket.site.arn}/*",
-    ]
-
-    condition {
-      test     = "Bool"
-      variable = "aws:SecureTransport"
-      values   = ["false"]
-    }
-  }
-}
-
-resource "aws_s3_bucket_policy" "site" {
-  bucket = aws_s3_bucket.site.id
-  policy = data.aws_iam_policy_document.site.json
-
-  depends_on = [aws_s3_bucket_public_access_block.site]
-}
-
+# Bucket policy for the site is in cloudfront.tf (site_combined); no separate policy here.
+# Note: Additional OAC policy for CloudFront is in cloudfront.tf (aws_s3_bucket_policy.site_oac).
 # -------------------------------------------------------------------
 # Lambda artefacts bucket (stores lambda.zip, consumed by aws_lambda_function)
 # -------------------------------------------------------------------

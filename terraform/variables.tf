@@ -39,3 +39,9 @@ variable "bedrock_model_id" {
   type        = string
   default     = "global.anthropic.claude-haiku-4-5-20251001-v1:0"
 }
+
+variable "domain_name" {
+  description = "Root domain name for the site (used for ACM and Route53)."
+  type        = string
+  default     = "rr-djuikoo.com"
+}

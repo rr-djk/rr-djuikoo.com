@@ -35,6 +35,7 @@ resource "aws_lambda_function" "chat" {
     variables = {
       SESSIONS_TABLE   = var.sessions_table_name
       BEDROCK_MODEL_ID = var.bedrock_model_id
+      RATE_LIMIT_TABLE = var.rate_limit_table_name
     }
   }
 
@@ -43,28 +44,15 @@ resource "aws_lambda_function" "chat" {
 
 resource "aws_lambda_function_url" "chat" {
   function_name      = aws_lambda_function.chat.function_name
-  authorization_type = "NONE"
+  authorization_type = "AWS_IAM"
   invoke_mode        = "RESPONSE_STREAM"
-
-  cors {
-    allow_origins = ["https://rr-djuikoo.com", "http://localhost:8000"]
-    allow_methods = ["POST"]
-    allow_headers = ["content-type"]
-  }
 }
 
-resource "aws_lambda_permission" "chat_url" {
-  statement_id           = "AllowPublicFunctionUrl"
+resource "aws_lambda_permission" "chat_cloudfront" {
+  statement_id           = "AllowCloudFrontInvokeFunctionUrl"
   action                 = "lambda:InvokeFunctionUrl"
   function_name          = aws_lambda_function.chat.function_name
-  principal              = "*"
-  function_url_auth_type = "NONE"
-}
-
-resource "aws_lambda_permission" "chat_invoke_via_url" {
-  statement_id             = "AllowInvokeViaFunctionUrl"
-  action                   = "lambda:InvokeFunction"
-  function_name            = aws_lambda_function.chat.function_name
-  principal                = "*"
-  invoked_via_function_url = true
+  principal              = "cloudfront.amazonaws.com"
+  source_arn             = aws_cloudfront_distribution.main.arn
+  function_url_auth_type = "AWS_IAM"
 }

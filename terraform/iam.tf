@@ -39,6 +39,16 @@ data "aws_iam_policy_document" "chat" {
   }
 
   statement {
+    sid    = "AccessRateLimitTable"
+    effect = "Allow"
+    actions = [
+      "dynamodb:GetItem",
+      "dynamodb:UpdateItem",
+    ]
+    resources = [aws_dynamodb_table.rate_limit.arn]
+  }
+
+  statement {
     sid    = "InvokeBedrock"
     effect = "Allow"
     actions = [
