@@ -107,7 +107,7 @@ jobs:
 
       # Gate: fails the job on HIGH/CRITICAL (Semgrep ERROR) findings.
       - name: Run Semgrep
-        run: /tmp/semgrep-venv/bin/semgrep --config=auto --sarif --output=semgrep.sarif --error --severity ERROR .
+        run: /tmp/semgrep-venv/bin/semgrep --config=p/ci --sarif --output=semgrep.sarif --error --severity ERROR .
 
       - name: Upload SARIF
         if: always()
