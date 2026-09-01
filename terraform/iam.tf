@@ -80,13 +80,14 @@ resource "aws_iam_role" "deploy_site" {
       Effect    = "Allow"
       Principal = { Federated = aws_iam_openid_connect_provider.github.arn }
       Action    = "sts:AssumeRoleWithWebIdentity"
+      # The deploy job declares `environment: production`, so GitHub always issues
+      # a sub of the form `repo:...:environment:production`. Restricting to that
+      # single subject prevents a future workflow on main, with no environment
+      # declared, from assuming the role and bypassing the environment approval.
       Condition = {
-        StringEquals = { "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com" }
-        StringLike = {
-          "token.actions.githubusercontent.com:sub" = [
-            "repo:rr-djk/rr-djuikoo.com:ref:refs/heads/main",
-            "repo:rr-djk/rr-djuikoo.com:environment:production",
-          ]
+        StringEquals = {
+          "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+          "token.actions.githubusercontent.com:sub" = "repo:rr-djk/rr-djuikoo.com:environment:production"
         }
       }
     }]

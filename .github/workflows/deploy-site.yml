@@ -40,16 +40,24 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          fetch-depth: 2
+          fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
+      # Diff against the first parent: on a merge commit this is exactly what
+      # the PR brought into main. paths-filter does not fit here - under
+      # workflow_run it falls back to `git log -1 --name-status`, which returns
+      # no files for a merge commit.
       - name: Detect site changes
-        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: changes
-        with:
-          filters: |
-            site:
-              - 'site/**'
-              - '.github/workflows/deploy-site.yml'
+        env:
+          SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet "$SHA^1" "$SHA" -- site/ .github/workflows/deploy-site.yml; then
+            echo "site=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "site=true" >> "$GITHUB_OUTPUT"
+          fi
 
   deploy:
     needs: check

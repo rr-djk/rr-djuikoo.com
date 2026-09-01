@@ -4,6 +4,11 @@ on:
   pull_request:
     branches: [main]
 
+  # Merging a PR pushes to main: this trigger re-runs the scans on the merge
+  # result and produces the workflow_run that `Deploy Site` waits for.
+  push:
+    branches: [main]
+
 permissions: {}
 
 # Cancel any previous running workflow for the
