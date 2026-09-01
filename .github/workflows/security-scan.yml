@@ -37,8 +37,6 @@ jobs:
       # Gate: fails the job on HIGH/CRITICAL findings only. The SARIF
       # run below still reports every severity (LOW to CRITICAL), so
       # lower-severity findings are never silently ignored.
-      # scan-ref: . — no lockfile today; Trivy will pick up
-      # lambda/package-lock.json when it appears.
       - name: Run Trivy (gate on HIGH/CRITICAL)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
@@ -99,11 +97,13 @@ jobs:
 
       - name: Install Semgrep
         run: |
-          if [ ! -x /tmp/semgrep-venv/bin/semgrep ]; then
+          if ! /tmp/semgrep-venv/bin/semgrep --version 2>/dev/null | grep -q "1.172.0"; then
+            rm -rf /tmp/semgrep-venv
             python3 -m venv /tmp/semgrep-venv
             /tmp/semgrep-venv/bin/pip install --upgrade pip
             /tmp/semgrep-venv/bin/pip install semgrep==1.172.0
           fi
+          /tmp/semgrep-venv/bin/semgrep --version
 
       # Gate: fails the job on HIGH/CRITICAL (Semgrep ERROR) findings.
       - name: Run Semgrep
