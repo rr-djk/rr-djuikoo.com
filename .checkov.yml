@@ -32,3 +32,14 @@ skip-check:
   # NOTE: Decision to be revisited once app is functional and observability justifies
   # cost/overhead.
   - CKV_AWS_50
+
+  # Public personal site - no geo restriction needed.
+  - CKV_AWS_374
+
+  # Access logs CloudFront différés - pas de trafic avant lancement ;
+  # à réactiver (logging_config + bucket de logs) quand le site sera live.
+  - CKV_AWS_86
+
+  # Origin failover non applicable : origine S3 unique servie par OAC,
+  # pas d'origine secondaire / réplication justifiée pour un site perso.
+  - CKV_AWS_310
