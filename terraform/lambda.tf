@@ -26,6 +26,8 @@ resource "aws_lambda_function" "chat" {
   memory_size   = 512
   timeout       = 30
 
+  reserved_concurrent_executions = 10
+
   s3_bucket         = aws_s3_bucket.lambda_artifacts.id
   s3_key            = aws_s3_object.chat_artifact.key
   source_code_hash  = data.archive_file.chat.output_base64sha256
