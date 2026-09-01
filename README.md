@@ -41,6 +41,14 @@ Makefile           # cible serve
 
 Le chat appelle `POST /api/chat` (`{ message, sessionId }`). Sans backend, la réponse affiche `[Namespace] Error calling the agent.` (comportement attendu).
 
+## Notes Infrastructure
+
+> **Important** : la mise à jour de l'infrastructure AWS n'est gérée par aucun
+> workflow CI/CD. Les commandes Terraform (`init`, `plan`, `apply`, etc.) sont
+> lancées en local lorsque nécessaire. L'infrastructure actuelle étant figée
+> (aucune modification prévue à court terme), cette approche manuelle est
+> suffisante.
+
 ## Stack vérifiée
 
 | Couche        | Techno                                                                                                                           |

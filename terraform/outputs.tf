@@ -42,3 +42,8 @@ output "acm_certificate_arn" {
   description = "ARN of the ACM certificate for the site."
   value       = aws_acm_certificate.site.arn
 }
+
+output "deploy_role_arn" {
+  description = "ARN du rôle OIDC assumé par GitHub pour déployer le site."
+  value       = aws_iam_role.deploy_site.arn
+}
