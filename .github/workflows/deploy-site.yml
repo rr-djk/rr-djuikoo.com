@@ -1,0 +1,68 @@
+name: Deploy Site
+
+on:
+  workflow_run:
+    workflows: ["Security Scan"]
+    types: [completed]
+    branches: [main]
+  pull_request:
+    branches: [main]
+    types: [closed]
+    paths: ["site/**", ".github/workflows/deploy-site.yml"]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: deploy-site
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: >
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+      github.event_name == 'workflow_dispatch'
+    name: Sync S3 + invalidate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      # audit-only: logs egress but does not block it (same for every
+      # harden-runner step in this file).
+      # TODO: switch to egress-policy: block with allowed-endpoints list later.
+      - name: Harden runner
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@ececac1a45f3b08a01d2dd070d28d72c98fa13d08 # v4.3.1
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Sync site to S3 (assets, 1h cache)
+        run: |
+          aws s3 sync site/ "s3://rr-djuikoo-site" --delete --no-progress \
+            --exclude "index.html" \
+            --cache-control "public, max-age=3600"
+
+      - name: Upload index.html (no-cache)
+        run: |
+          aws s3 cp site/index.html "s3://rr-djuikoo-site/index.html" \
+            --cache-control "no-cache, no-store, must-revalidate" \
+            --content-type "text/html; charset=utf-8"
+
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" \
+            --paths "/*"
