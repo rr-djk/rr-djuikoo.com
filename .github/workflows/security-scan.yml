@@ -4,6 +4,11 @@ on:
   pull_request:
     branches: [main]
 
+  # Merging a PR pushes to main: this trigger re-runs the scans on the merge
+  # result and produces the workflow_run that `Deploy Site` waits for.
+  push:
+    branches: [main]
+
 permissions: {}
 
 # Cancel any previous running workflow for the
@@ -37,8 +42,6 @@ jobs:
       # Gate: fails the job on HIGH/CRITICAL findings only. The SARIF
       # run below still reports every severity (LOW to CRITICAL), so
       # lower-severity findings are never silently ignored.
-      # scan-ref: . — no lockfile today; Trivy will pick up
-      # lambda/package-lock.json when it appears.
       - name: Run Trivy (gate on HIGH/CRITICAL)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
@@ -99,18 +102,17 @@ jobs:
 
       - name: Install Semgrep
         run: |
-          if [ ! -x /tmp/semgrep-venv/bin/semgrep ]; then
+          if ! /tmp/semgrep-venv/bin/semgrep --version 2>/dev/null | grep -q "1.172.0"; then
+            rm -rf /tmp/semgrep-venv
             python3 -m venv /tmp/semgrep-venv
             /tmp/semgrep-venv/bin/pip install --upgrade pip
             /tmp/semgrep-venv/bin/pip install semgrep==1.172.0
           fi
+          /tmp/semgrep-venv/bin/semgrep --version
 
-      # Audit-only: the job never blocks the PR, all findings are
-      # reported in the SARIF.
-      # TODO: fail on HIGH/CRITICAL once the current findings are fixed.
+      # Gate: fails the job on HIGH/CRITICAL (Semgrep ERROR) findings.
       - name: Run Semgrep
-        continue-on-error: true
-        run: /tmp/semgrep-venv/bin/semgrep --config=auto --sarif --output=semgrep.sarif .
+        run: /tmp/semgrep-venv/bin/semgrep --config=p/ci --sarif --output=semgrep.sarif --error --severity ERROR .
 
       - name: Upload SARIF
         if: always()
@@ -174,10 +176,7 @@ jobs:
             infra:
               - 'terraform/**'
 
-      # soft_fail: the job never blocks the PR, all findings
-      # (LOW to CRITICAL) are reported in the SARIF.
-      # TODO: switch to soft_fail: false, once the current findings are fixed,
-      # to fail on HIGH/CRITICAL.
+      # Gate: fails the job on HIGH/CRITICAL findings.
       - name: Run Checkov
         if: steps.changes.outputs.infra == 'true'
         uses: bridgecrewio/checkov-action@358405ddafaa109ad35d3d607bbc7cf933c742d9 # v12.3116.0
@@ -186,11 +185,8 @@ jobs:
           framework: terraform
           config_file: .checkov.yml
           quiet: true
-          # soft_fail set to true to prevent pipeline failure when security issues
-          # are found.
-          # TODO: Change soft_fail to false once the full infrastructure code is
-          # ready, to strictly enforce security checks.
-          soft_fail: true
+          soft_fail: false
+          hard_fail_on: HIGH,CRITICAL
           output_format: cli,sarif
           output_file_path: console,checkov.sarif
 
