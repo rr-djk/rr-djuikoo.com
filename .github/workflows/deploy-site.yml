@@ -5,10 +5,6 @@ on:
     workflows: ["Security Scan"]
     types: [completed]
     branches: [main]
-  pull_request:
-    branches: [main]
-    types: [closed]
-    paths: ["site/**", ".github/workflows/deploy-site.yml"]
   workflow_dispatch:
 
 permissions: {}
@@ -18,11 +14,44 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  check:
     if: >
       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
-      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
       github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      should_deploy: ${{ steps.changes.outputs.site == 'true' || github.event_name == 'workflow_dispatch' }}
+    permissions:
+      contents: read
+    steps:
+      # audit-only: logs egress but does not block it (same for every
+      # harden-runner step in this file).
+      # TODO: switch to egress-policy: block with allowed-endpoints list later.
+      - name: Harden runner
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+
+      - name: Detect site changes
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: changes
+        with:
+          filters: |
+            site:
+              - 'site/**'
+              - '.github/workflows/deploy-site.yml'
+
+  deploy:
+    needs: check
+    if: needs.check.outputs.should_deploy == 'true'
+    environment: production
     name: Sync S3 + invalidate
     runs-on: ubuntu-24.04
     timeout-minutes: 10
