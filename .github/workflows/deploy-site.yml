@@ -64,6 +64,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
+      attestations: write
     steps:
       # audit-only: logs egress but does not block it (same for every
       # harden-runner step in this file).
@@ -78,11 +79,36 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Create deterministic archive + manifest
+        run: |
+          tar --sort-name --mtime='UTC 2020-01-01' --owner=0 --group=0 -czf site.tar.gz site/
+          find site -type f -exec sha256sum {} \; | LC_ALL=C sort | tee manifest.sha256
+          sha256sum -c manifest.sha256
+          sha256sum site.tar.gz
+
+      - name: Attest build provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: site.tar.gz
+
+      - name: Verify attestation
+        run: gh attestation verify site.tar.gz --owner rr-djk --repo rr-djk/rr-djuikoo.com
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract for sync
+        run: tar xzf site.tar.gz
+
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           role-to-assume: ${{ env.AWS_DEPLOY_ROLE_ARN }}
           aws-region: us-east-1
+
+      - name: Preview sync (dryrun)
+        run: |
+          aws s3 sync site/ "s3://rr-djuikoo-site" --delete --dryrun --no-progress \
+            > preview.txt && cat preview.txt
 
       - name: Sync site to S3 (assets, 1h cache)
         run: |
@@ -96,8 +122,32 @@ jobs:
             --cache-control "no-cache, no-store, must-revalidate" \
             --content-type "text/html; charset=utf-8"
 
+      - name: Verify S3 integrity
+        run: |
+          set -euo pipefail
+          while IFS= read -r line; do
+            sha=$(echo "$line" | awk '{print $1}')
+            path=$(echo "$line" | awk '{print $2}')
+            key=${path#site/}
+            etag=$(aws s3api head-object --bucket rr-djuikoo-site --key "$key" \
+              --query ETag --output text | tr -d '"')
+            if echo "$etag" | grep -q "-"; then
+              echo "multipart ETag for $key ($etag), skipping strict MD5 check"
+              continue
+            fi
+            local_md5=$(md5sum "$path" | awk '{print $1}')
+            if [ "$local_md5" != "$etag" ]; then
+              echo "mismatch $key local MD5 $local_md5 != ETag $etag"
+              exit 1
+            fi
+            echo "verified $key"
+          done < manifest.sha256
+          echo "All S3 objects verified"
+
       - name: Invalidate CloudFront
         run: |
-          aws cloudfront create-invalidation \
-            --distribution-id "$DISTRIBUTION_ID" \
-            --paths "/*"
+          id=$(aws cloudfront create-invalidation \
+            --distribution-id "$DISTRIBUTION_ID" --paths "/*" \
+            --query Invalidation.Id --output text)
+          echo "Invalidation $id"
+          aws cloudfront wait invalidation-completed --distribution-id "$DISTRIBUTION_ID" --id "$id"
