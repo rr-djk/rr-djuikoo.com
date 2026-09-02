@@ -1,6 +1,137 @@
-// Infra-only stub: echoes the message as a single token.
-// Real Bedrock/Strands implementation will replace this in a later slice.
+import { Agent, BedrockModel, tool } from "@strands-agents/sdk";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient, GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { z } from "zod";
+import { PROJECTS, EDUCATION, EXPERIENCE, CERTIFICATIONS, CONTACT } from "./data.mjs";
+import { SYSTEM_PROMPT } from "./prompts.mjs";
 
-export async function* answerWith(message) {
-  yield { type: "token", text: `Echo: ${message}` };
+const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
+  marshallOptions: { removeUndefinedValues: true },
+});
+
+const model = new BedrockModel({
+  modelId: process.env.BEDROCK_MODEL_ID ?? "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+});
+
+async function loadHistory(sessionId) {
+  const resp = await ddb.send(
+    new GetCommand({
+      TableName: process.env.SESSIONS_TABLE,
+      Key: { sessionId },
+    })
+  );
+  return resp.Item ? JSON.parse(resp.Item.messages) : [];
+}
+
+async function saveHistory(sessionId, messages) {
+  await ddb.send(
+    new PutCommand({
+      TableName: process.env.SESSIONS_TABLE,
+      Item: {
+        sessionId,
+        messages: JSON.stringify(messages),
+        expiresAt: Math.floor(Date.now() / 1000) + 24 * 60 * 60,
+      },
+    })
+  );
+}
+
+const listProjects = tool({
+  name: "list_projects",
+  description: "List portfolio projects, optionally filtered by name or tech. Returns matching projects as JSON.",
+  inputSchema: z.object({
+    query: z.string().optional().describe("Filter by name or tech, e.g. 'terraform' or 'aws'"),
+  }),
+  callback: async ({ query }) => {
+    if (!query) return JSON.stringify(PROJECTS);
+    const q = query.toLowerCase();
+    const matches = PROJECTS.filter(
+      (p) => p.name.toLowerCase().includes(q) || p.tech.some((t) => t.toLowerCase().includes(q))
+    );
+    if (matches.length === 0) return `No projects found matching '${query}'.`;
+    return JSON.stringify(matches);
+  },
+});
+
+const getProjectDetails = tool({
+  name: "get_project_details",
+  description: "Get details for a single portfolio project by name.",
+  inputSchema: z.object({
+    project_name: z.string().describe("Exact or partial project name, e.g. 'rr-djuikoo.com'"),
+  }),
+  callback: async ({ project_name }) => {
+    const q = project_name.toLowerCase();
+    const match = PROJECTS.find((p) => p.name.toLowerCase() === q) ?? PROJECTS.find((p) => p.name.toLowerCase().includes(q));
+    if (!match) return `No project found matching '${project_name}'. Available: ${PROJECTS.map((p) => p.name).join(", ")}.`;
+    return JSON.stringify(match);
+  },
+});
+
+const getEducation = tool({
+  name: "get_education",
+  description: "Get education history for the portfolio owner.",
+  inputSchema: z.object({}),
+  callback: async () => JSON.stringify(EDUCATION),
+});
+
+const getExperience = tool({
+  name: "get_experience",
+  description: "Get work experience entries, optionally filtered by company.",
+  inputSchema: z.object({
+    company: z.string().optional().describe("Filter by company name"),
+  }),
+  callback: async ({ company }) => {
+    if (!company) return JSON.stringify(EXPERIENCE);
+    const q = company.toLowerCase();
+    const matches = EXPERIENCE.filter((e) => e.org.toLowerCase().includes(q));
+    if (matches.length === 0) return `No experience found matching '${company}'.`;
+    return JSON.stringify(matches);
+  },
+});
+
+const getCertifications = tool({
+  name: "get_certifications",
+  description: "Get certifications, optionally filtered by name.",
+  inputSchema: z.object({
+    name: z.string().optional().describe("Filter by certification name"),
+  }),
+  callback: async ({ name }) => {
+    if (!name) return JSON.stringify(CERTIFICATIONS);
+    const q = name.toLowerCase();
+    const matches = CERTIFICATIONS.filter((c) => c.name.toLowerCase().includes(q));
+    if (matches.length === 0) return `No certifications found matching '${name}'.`;
+    return JSON.stringify(matches);
+  },
+});
+
+const getContact = tool({
+  name: "get_contact",
+  description: "Get contact information (email, LinkedIn, GitHub) for the portfolio owner.",
+  inputSchema: z.object({}),
+  callback: async () => JSON.stringify(CONTACT),
+});
+
+export async function* answerWith(message, sessionId) {
+  const history = await loadHistory(sessionId);
+  const agent = new Agent({
+    model,
+    systemPrompt: SYSTEM_PROMPT,
+    messages: history,
+    tools: [listProjects, getProjectDetails, getEducation, getExperience, getCertifications, getContact],
+    printer: false,
+  });
+
+  for await (const ev of agent.stream(message)) {
+    if (
+      ev.type === "modelStreamUpdateEvent" &&
+      ev.event.type === "modelContentBlockDeltaEvent" &&
+      ev.event.delta?.type === "textDelta"
+    ) {
+      yield { type: "token", text: ev.event.delta.text };
+    } else if (ev.type === "beforeToolCallEvent") {
+      yield { type: "tool", name: ev.toolUse?.name ?? "tool" };
+    }
+  }
+
+  await saveHistory(sessionId, agent.messages);
 }
