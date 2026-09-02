@@ -2,7 +2,7 @@ import { Agent, BedrockModel, tool } from "@strands-agents/sdk";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 import { z } from "zod";
-import { PROJECTS, EDUCATION, EXPERIENCE, CERTIFICATIONS, CONTACT } from "./data.mjs";
+import { loadContent } from "./content.mjs";
 import { SYSTEM_PROMPT } from "./prompts.mjs";
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
@@ -36,88 +36,122 @@ async function saveHistory(sessionId, messages) {
   );
 }
 
-const listProjects = tool({
-  name: "list_projects",
-  description: "List portfolio projects, optionally filtered by name or tech. Returns matching projects as JSON.",
-  inputSchema: z.object({
-    query: z.string().optional().describe("Filter by name or tech, e.g. 'terraform' or 'aws'"),
-  }),
-  callback: async ({ query }) => {
-    if (!query) return JSON.stringify(PROJECTS);
-    const q = query.toLowerCase();
-    const matches = PROJECTS.filter(
-      (p) => p.name.toLowerCase().includes(q) || p.tech.some((t) => t.toLowerCase().includes(q))
-    );
-    if (matches.length === 0) return `No projects found matching '${query}'.`;
-    return JSON.stringify(matches);
-  },
-});
+// Tools are built per invocation from the content loaded for that invocation,
+// which keeps the callbacks synchronous over plain data and confines the
+// asynchronous load to a single place.
+function makeTools(content) {
+  const { projects, education, experience, certifications, identity, about, contact } = content;
 
-const getProjectDetails = tool({
-  name: "get_project_details",
-  description: "Get details for a single portfolio project by name.",
-  inputSchema: z.object({
-    project_name: z.string().describe("Exact or partial project name, e.g. 'rr-djuikoo.com'"),
-  }),
-  callback: async ({ project_name }) => {
-    const q = project_name.toLowerCase();
-    const match = PROJECTS.find((p) => p.name.toLowerCase() === q) ?? PROJECTS.find((p) => p.name.toLowerCase().includes(q));
-    if (!match) return `No project found matching '${project_name}'. Available: ${PROJECTS.map((p) => p.name).join(", ")}.`;
-    return JSON.stringify(match);
-  },
-});
+  const getProfile = tool({
+    name: "get_profile",
+    description:
+      "Get the portfolio owner's identity (name, title, short bio) and the long-form about text.",
+    inputSchema: z.object({}),
+    callback: async () => JSON.stringify({ identity, about }),
+  });
 
-const getEducation = tool({
-  name: "get_education",
-  description: "Get education history for the portfolio owner.",
-  inputSchema: z.object({}),
-  callback: async () => JSON.stringify(EDUCATION),
-});
+  const listProjects = tool({
+    name: "list_projects",
+    description: "List portfolio projects, optionally filtered by name or tech. Returns matching projects as JSON.",
+    inputSchema: z.object({
+      query: z.string().optional().describe("Filter by name or tech, e.g. 'terraform' or 'aws'"),
+    }),
+    callback: async ({ query }) => {
+      if (!query) return JSON.stringify(projects);
+      const q = query.toLowerCase();
+      const matches = projects.filter(
+        (p) => p.name.toLowerCase().includes(q) || p.tech.some((t) => t.toLowerCase().includes(q))
+      );
+      if (matches.length === 0) return `No projects found matching '${query}'.`;
+      return JSON.stringify(matches);
+    },
+  });
 
-const getExperience = tool({
-  name: "get_experience",
-  description: "Get work experience entries, optionally filtered by company.",
-  inputSchema: z.object({
-    company: z.string().optional().describe("Filter by company name"),
-  }),
-  callback: async ({ company }) => {
-    if (!company) return JSON.stringify(EXPERIENCE);
-    const q = company.toLowerCase();
-    const matches = EXPERIENCE.filter((e) => e.org.toLowerCase().includes(q));
-    if (matches.length === 0) return `No experience found matching '${company}'.`;
-    return JSON.stringify(matches);
-  },
-});
+  const getProjectDetails = tool({
+    name: "get_project_details",
+    description: "Get details for a single portfolio project by name.",
+    inputSchema: z.object({
+      project_name: z.string().describe("Exact or partial project name, e.g. 'rr-djuikoo.com'"),
+    }),
+    callback: async ({ project_name }) => {
+      const q = project_name.toLowerCase();
+      const match = projects.find((p) => p.name.toLowerCase() === q) ?? projects.find((p) => p.name.toLowerCase().includes(q));
+      if (!match) return `No project found matching '${project_name}'. Available: ${projects.map((p) => p.name).join(", ")}.`;
+      return JSON.stringify(match);
+    },
+  });
 
-const getCertifications = tool({
-  name: "get_certifications",
-  description: "Get certifications, optionally filtered by name.",
-  inputSchema: z.object({
-    name: z.string().optional().describe("Filter by certification name"),
-  }),
-  callback: async ({ name }) => {
-    if (!name) return JSON.stringify(CERTIFICATIONS);
-    const q = name.toLowerCase();
-    const matches = CERTIFICATIONS.filter((c) => c.name.toLowerCase().includes(q));
-    if (matches.length === 0) return `No certifications found matching '${name}'.`;
-    return JSON.stringify(matches);
-  },
-});
+  const getEducation = tool({
+    name: "get_education",
+    description: "Get education history for the portfolio owner.",
+    inputSchema: z.object({}),
+    callback: async () => JSON.stringify(education),
+  });
 
-const getContact = tool({
-  name: "get_contact",
-  description: "Get contact information (email, LinkedIn, GitHub) for the portfolio owner.",
-  inputSchema: z.object({}),
-  callback: async () => JSON.stringify(CONTACT),
-});
+  const getExperience = tool({
+    name: "get_experience",
+    description: "Get work experience entries, optionally filtered by company.",
+    inputSchema: z.object({
+      company: z.string().optional().describe("Filter by company name"),
+    }),
+    callback: async ({ company }) => {
+      if (!company) return JSON.stringify(experience);
+      const q = company.toLowerCase();
+      const matches = experience.filter((e) => e.org.toLowerCase().includes(q));
+      if (matches.length === 0) return `No experience found matching '${company}'.`;
+      return JSON.stringify(matches);
+    },
+  });
+
+  const getCertifications = tool({
+    name: "get_certifications",
+    description: "Get certifications, optionally filtered by name.",
+    inputSchema: z.object({
+      name: z.string().optional().describe("Filter by certification name"),
+    }),
+    callback: async ({ name }) => {
+      if (!name) return JSON.stringify(certifications);
+      const q = name.toLowerCase();
+      const matches = certifications.filter((c) => c.name.toLowerCase().includes(q));
+      if (matches.length === 0) return `No certifications found matching '${name}'.`;
+      return JSON.stringify(matches);
+    },
+  });
+
+  const getContact = tool({
+    name: "get_contact",
+    description: "Get contact information (email, LinkedIn, GitHub) for the portfolio owner.",
+    inputSchema: z.object({}),
+    callback: async () => JSON.stringify(contact),
+  });
+
+  return [
+    getProfile,
+    listProjects,
+    getProjectDetails,
+    getEducation,
+    getExperience,
+    getCertifications,
+    getContact,
+  ];
+}
 
 export async function* answerWith(message, sessionId) {
+  let content;
+  try {
+    content = await loadContent();
+  } catch (err) {
+    console.error("unable to load portfolio content", err);
+    yield { type: "error", text: "[Namespace] Portfolio content is unavailable right now." };
+    return;
+  }
+
   const history = await loadHistory(sessionId);
   const agent = new Agent({
     model,
     systemPrompt: SYSTEM_PROMPT,
     messages: history,
-    tools: [listProjects, getProjectDetails, getEducation, getExperience, getCertifications, getContact],
+    tools: makeTools(content),
     printer: false,
   });
 

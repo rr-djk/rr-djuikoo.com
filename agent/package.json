@@ -5,6 +5,7 @@
   "description": "Wags chat agent - Bedrock streaming with portfolio tools",
   "dependencies": {
     "@aws-sdk/client-dynamodb": "3.1124.0",
+    "@aws-sdk/client-s3": "3.1124.0",
     "@aws-sdk/lib-dynamodb": "3.1124.0",
     "@strands-agents/sdk": "1.7.0",
     "zod": "4.1.12"
