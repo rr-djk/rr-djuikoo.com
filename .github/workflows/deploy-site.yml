@@ -25,6 +25,9 @@ jobs:
     timeout-minutes: 5
     outputs:
       should_deploy: ${{ steps.changes.outputs.site == 'true' || github.event_name == 'workflow_dispatch' }}
+      # Pinned so the deploy job builds the exact commit that was scanned and
+      # diffed here.
+      sha: ${{ github.event.workflow_run.head_sha || github.sha }}
     permissions:
       contents: read
     steps:
@@ -68,7 +71,7 @@ jobs:
       AWS_DEPLOY_ROLE_ARN: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
     name: Sync S3 + invalidate
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 15
     permissions:
       contents: read
       id-token: write
@@ -86,6 +89,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          ref: ${{ needs.check.outputs.sha }}
 
       - name: Create deterministic archive + manifest
         run: |

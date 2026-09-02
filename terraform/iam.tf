@@ -80,14 +80,13 @@ resource "aws_iam_role" "deploy_site" {
       Effect    = "Allow"
       Principal = { Federated = aws_iam_openid_connect_provider.github.arn }
       Action    = "sts:AssumeRoleWithWebIdentity"
-      # The deploy job declares `environment: production`, so GitHub always issues
-      # a sub of the form `repo:...:environment:production`. Restricting to that
-      # single subject prevents a future workflow on main, with no environment
-      # declared, from assuming the role and bypassing the environment approval.
       Condition = {
         StringEquals = {
           "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
-          "token.actions.githubusercontent.com:sub" = "repo:rr-djk/rr-djuikoo.com:environment:production"
+          "token.actions.githubusercontent.com:sub" = [
+            "repo:rr-djk/rr-djuikoo.com:environment:production",
+            "repo:rr-djk@211054470/rr-djuikoo.com@1348058256:environment:production",
+          ]
         }
       }
     }]
@@ -102,7 +101,9 @@ resource "aws_iam_role_policy" "deploy_site" {
     Version = "2012-10-17"
     Statement = [
       { Sid = "ListSiteBucket", Effect = "Allow", Action = ["s3:ListBucket"], Resource = [aws_s3_bucket.site.arn] },
-      { Sid = "WriteSiteObjects", Effect = "Allow", Action = ["s3:PutObject", "s3:DeleteObject"], Resource = ["${aws_s3_bucket.site.arn}/*"] },
+      # s3:GetObject is required by the post-deploy integrity check, which calls
+      # s3api head-object to compare each ETag against the local MD5.
+      { Sid = "WriteSiteObjects", Effect = "Allow", Action = ["s3:PutObject", "s3:DeleteObject", "s3:GetObject"], Resource = ["${aws_s3_bucket.site.arn}/*"] },
       { Sid = "CreateInvalidation", Effect = "Allow", Action = ["cloudfront:CreateInvalidation", "cloudfront:GetInvalidation"], Resource = [aws_cloudfront_distribution.main.arn] },
     ]
   })
