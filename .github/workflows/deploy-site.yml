@@ -100,9 +100,14 @@ jobs:
           subject-path: site.tar.gz
 
       - name: Verify attestation
-        run: gh attestation verify site.tar.gz --owner rr-djk --repo rr-djk/rr-djuikoo.com
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh attestation verify site.tar.gz \
+            --repo "$REPO" \
+            --signer-workflow "$REPO/.github/workflows/deploy-site.yml" \
+            --deny-self-hosted-runners
 
       - name: Extract for sync
         run: tar xzf site.tar.gz
