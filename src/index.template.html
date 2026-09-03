@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="{{ meta.lang }}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title><!-- TODO(content): meta.title -->{{ meta.title }}</title>
+<meta name="description" content="<!-- TODO(content): meta.description -->{{ meta.description }}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ============================================= -->
+  <!-- MAIN PANEL — 70%                              -->
+  <!-- ============================================= -->
+  <main class="main-panel">
+
+    <header class="hero">
+      <h1 class="hero-name"><!-- TODO(content): identity.name -->{{ identity.name }}</h1>
+      <p class="hero-title"><!-- TODO(content): identity.title -->{{ identity.title }}</p>
+    </header>
+
+    <nav class="section-nav" aria-label="Navigation des sections">
+      <a href="#about">À propos</a>
+      <a href="#projects">Projets</a>
+      <a href="#education">Études</a>
+      <a href="#experience">Expérience</a>
+      <a href="#certifications">Certifications</a>
+      <a href="#contact">Contact</a>
+    </nav>
+
+    <section id="about" class="section">
+      <h2 class="section-title">À propos</h2>
+      <div class="section-body">
+        <!-- TODO(content): about.paragraphs[] -->
+        <template data-each="about.paragraphs">
+        <p>{{ . }}</p>
+        </template>
+      </div>
+    </section>
+
+    <section id="projects" class="section">
+      <h2 class="section-title">Projets</h2>
+      <div class="section-body">
+        <!-- TODO(content): projects[] — one .project-card per entry -->
+        <template data-each="projects">
+        <article class="project-card">
+          <div class="project-card-header">
+            <h3>{{ name }}</h3>
+            <template data-each="links">
+            <a href="{{ href }}" class="project-link" target="_blank" rel="noopener">{{ label }}</a>
+            </template>
+          </div>
+          <ul class="project-bullets">
+          <template data-each="descriptions">
+          <li>{{ . }}</li>
+          </template>
+          </ul>
+          <ul class="tag-list">
+            <template data-each="tech">
+            <li>{{ . }}</li>
+            </template>
+          </ul>
+        </article>
+        </template>
+      </div>
+    </section>
+
+    <section id="education" class="section">
+      <h2 class="section-title">Études</h2>
+      <div class="section-body">
+        <!-- TODO(content): education[] — one .experience-item per entry -->
+        <template data-each="education">
+        <div class="experience-item">
+          <div class="experience-content">
+            <h3>{{ degree }}</h3>
+            <p class="experience-org">{{ org }}</p>
+          </div>
+          <div class="experience-dates">{{ dates }}</div>
+        </div>
+        </template>
+      </div>
+    </section>
+
+    <section id="experience" class="section">
+      <h2 class="section-title">Expérience</h2>
+      <div class="section-body">
+        <!-- TODO(content): experience[] — one .experience-item per entry -->
+        <template data-each="experience">
+        <div class="experience-item">
+          <div class="experience-content">
+            <h3>{{ role }}</h3>
+            <p class="experience-org">{{ org }}</p>
+            <ul class="experience-bullets">
+            <template data-each="descriptions">
+            <li>{{ . }}</li>
+            </template>
+            </ul>
+          </div>
+          <div class="experience-dates">{{ dates }}</div>
+        </div>
+        </template>
+      </div>
+    </section>
+
+    <section id="certifications" class="section">
+      <h2 class="section-title">Certifications</h2>
+      <div class="section-body">
+        <!-- TODO(content): certifications[] — reuses .experience-item, like Études,
+             so the link lines up exactly where the dates do. -->
+        <template data-each="certifications">
+        <div class="experience-item">
+          <div class="experience-content">
+            <h3>{{ name }}</h3>
+            <p class="experience-org">{{ org }}</p>
+          </div>
+          <div class="experience-dates"><a href="{{ href }}" target="_blank" rel="noopener">Voir le certificat →</a></div>
+        </div>
+        </template>
+      </div>
+    </section>
+
+    <section id="contact" class="section">
+      <h2 class="section-title">Contact</h2>
+      <div class="section-body">
+        <ul class="contact-bullets">
+          <template data-each="contact.items">
+          <li>{{ prefix }} : <a href="{{ href }}" target="_blank" rel="noopener">{{ label }}</a></li>
+          </template>
+        </ul>
+      </div>
+    </section>
+
+    <footer class="main-footer">
+      <p>© <span id="year"></span> <!-- TODO(content): footer.name -->{{ footer.name }}</p>
+    </footer>
+
+  </main>
+
+  <!-- ============================================= -->
+  <!-- CHAT PANEL — 30%                              -->
+  <!-- ============================================= -->
+  <aside class="chat-panel" aria-label="Assistant conversationnel">
+
+    <div class="chat-body" id="chat-body">
+      <div class="chat-empty-state">
+        <div class="chat-empty-avatar" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="4" y="8" width="16" height="13" rx="4" stroke="currentColor" stroke-width="1.4"/>
+            <line x1="12" y1="8" x2="12" y2="4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+            <circle cx="12" cy="3" r="1.2" fill="currentColor"/>
+            <circle cx="9" cy="14.5" r="1" fill="currentColor"/>
+            <circle cx="15" cy="14.5" r="1" fill="currentColor"/>
+            <path d="M9.5 17.5C10.2 18.2 13.8 18.2 14.5 17.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <!-- TODO(content): chat.welcome[] / chat.question / chat.answer -->
+        <template data-each="chat.welcome">
+        <p>{{ . }}</p>
+        </template>
+        <p>{{ chat.question }} <strong>{{ chat.answer }}</strong></p>
+      </div>
+      <!-- Chat messages are injected here dynamically by main.js -->
+    </div>
+
+    <div class="chat-input-bar">
+      <form id="chat-form" autocomplete="off">
+        <input
+          type="text"
+          id="chat-input"
+          placeholder="{{ chat.placeholder }}"
+          aria-label="Ton message"
+        >
+        <button type="submit" aria-label="Envoyer">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 19V5M12 5L6 11M12 5L18 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </form>
+    </div>
+
+  </aside>
+
+</div>
+
+<script src="js/main.js"></script>
+</body>
+</html>

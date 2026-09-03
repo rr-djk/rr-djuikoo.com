@@ -18,6 +18,12 @@ const chatInput = document.getElementById('chat-input');
 const chatBody = document.getElementById('chat-body');
 const emptyState = document.querySelector('.chat-empty-state');
 
+/**
+ * Appends a chat message to the chat body.
+ * @param {string} role - Message role ("user" or "agent").
+ * @param {string} text - Message text.
+ * @returns {HTMLDivElement} The created message element.
+ */
 function appendMessage(role, text) {
   if (emptyState) emptyState.remove();
 
@@ -29,12 +35,44 @@ function appendMessage(role, text) {
   return el;
 }
 
-// Fills the agent bubble from the Lambda response.
-// Today: simple JSON response.
-// Later: read NDJSON stream token-by-token.
+/**
+ * Parses an NDJSON response stream.
+ * @param {Response} response - Fetch response with a readable stream.
+ * @yields {object} Parsed JSON object per line.
+ */
+async function* parseNDJSONStream(response) {
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const lines = buf.split("\n");
+    buf = lines.pop();
+
+    for (const line of lines) {
+      if (line.trim()) yield JSON.parse(line);
+    }
+  }
+}
+
+/**
+ * Reads the NDJSON reply stream and updates the target element.
+ * @param {HTMLElement} targetEl - Element to update with streamed tokens.
+ * @param {Response} response - Fetch response to consume.
+ * @returns {Promise<void>}
+ */
 async function readReply(targetEl, response) {
-  const data = await response.json();
-    targetEl.textContent = data.reply ?? '[Namespace] Empty agent reply.';
+  for await (const message of parseNDJSONStream(response)) {
+    if (message.type === "token") {
+      targetEl.textContent += message.text;
+      chatBody.scrollTop = chatBody.scrollHeight;
+    } else if (message.type === "error") {
+      targetEl.textContent = message.text;
+    }
+  }
 }
 
 chatForm.addEventListener('submit', async (e) => {

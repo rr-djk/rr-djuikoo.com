@@ -38,6 +38,8 @@ resource "aws_lambda_function" "chat" {
       SESSIONS_TABLE   = var.sessions_table_name
       BEDROCK_MODEL_ID = var.bedrock_model_id
       RATE_LIMIT_TABLE = var.rate_limit_table_name
+      CONTENT_BUCKET   = var.site_bucket_name
+      CONTENT_KEY      = "content.json"
     }
   }
 

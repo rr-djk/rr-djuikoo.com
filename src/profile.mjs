@@ -1,0 +1,129 @@
+// Single source of truth for every piece of portfolio content.
+//
+// Consumed at build time by scripts/build-site.mjs, which renders two
+// artefacts into site/: index.html (served to browsers and crawlers) and
+// content.json (read from S3 at runtime by the Lambda - see agent/content.mjs).
+//
+// Everything here is **published publicly and is readable** at
+// https://rr-djuikoo.com/content.json - keep private details out.
+//
+// After editing this file, run `make build` and commit the regenerated
+// site/index.html and site/content.json alongside it.
+
+export default {
+  meta: {
+    lang: "fr",
+    title: "Roger Djuikoo | Portfolio",
+    description: "Portfolio de Roger Djuikoo, étudiant en informatique à l'UQAM.",
+  },
+
+  identity: {
+    name: "Roger Djuikoo",
+    title: "Étudiant en informatique à l'UQAM",
+  },
+
+  about: {
+    paragraphs: [
+      "J'ai toujours trouvé fascinant de comprendre comment fonctionnent les ordinateurs. Bien avant de connaître les détails techniques, l'idée de pouvoir programmer une machine et de comprendre ce qui se passe derrière un écran me plaisait déjà. Lorsque j'ai décidé d'entreprendre des études universitaires, l'informatique était naturellement le domaine vers lequel je voulais aller.",
+      "Je suis aujourd'hui **étudiant en informatique à l'UQAM**, où je construis mes bases en développement logiciel tout en explorant progressivement les domaines qui m'intéressent le plus. Je me dirige particulièrement vers le **DevSecOps et le cloud**, avec l'envie de comprendre l'ensemble du cycle de vie d'une application : *la développer, la sécuriser, la tester et la déployer* sur une infrastructure que je comprends réellement.",
+      "Les pipelines CI/CD occupent actuellement une place importante dans mon apprentissage. J'aime leur rôle dans la livraison logicielle : c'est notamment à cette étape qu'on peut vérifier qu'une application répond aux attentes, détecter des vulnérabilités et automatiser suffisamment de contrôles pour rendre les déploiements plus fiables. J'y vois un problème à la fois technique et concret, et c'est un domaine dans lequel j'aime chercher des solutions.",
+      "Je développe également mes connaissances du cloud avec AWS, notamment à travers mes projets personnels et mon implication dans **l'équipe AWS SBG Core de mon école**. J'ai choisi de me concentrer sur AWS aussi parce que sa communauté montréalaise me permet de rencontrer des professionnels, d'assister à des événements et d'apprendre au-delà des cours.",
+      "Mes projets personnels me servent justement à mettre ces connaissances en pratique. Mon portfolio actuel rassemble une partie de ce que j'ai appris récemment, notamment autour de l'infrastructure as code, des CI/CD sécurisés, d'AWS et de l'intégration de l'IA dans des applications. Je m'intéresse aussi progressivement à la manière dont l'IA peut être utilisée comme un outil d'ingénierie, tout *en gardant une approche critique* : comparer les propositions, vérifier les sources et prendre mes décisions en fonction du problème que j'essaie réellement de résoudre.",
+      "Je ne cherche pas à tout maîtriser immédiatement. Je préfère avancer de manière méthodique, comprendre ce que je construis et continuer à améliorer mes compétences. Je suis actuellement **à la recherche d'un stage en développement logiciel, DevOps ou DevSecOps**, où je pourrai apprendre auprès d'une équipe expérimentée, contribuer concrètement et rencontrer des personnes dont je pourrai découvrir les façons de travailler.",
+      "Je suis encore au début de mon parcours, mais je sais que je veux continuer à progresser. Je suis *discipliné, curieux et prêt à travailler pour devenir meilleur*.",
+    ],
+  },
+
+  projects: [
+    {
+      name: "MyAm",
+      descriptions: [
+        "Application mobile qui déchiffre les étiquettes alimentaires : on scanne un produit, elle en extrait la composition et alerte sur les allergènes selon le profil de la personne, ses intolérances et son régime.",
+        "Projet universitaire mené à cinq, au sein duquel j'ai pris en charge l'authentification des utilisateurs et une partie de la protection des données.",
+        "J'ai également livré la fonctionnalité d'historique des scans, avec l'enregistrement sur l'appareil, leur consultation et leur export, ainsi que l'onglet de lecture d'étiquette, tests compris.",
+        "Enfin, j'ai repris la chaîne de build de l'équipe : correction d'une trentaine de vulnérabilités héritées de nos dépendances, détection automatique des suivantes, et parallélisation des étapes de compilation.",
+      ],
+      tech: ["Flutter", "Spring Boot", "Java", "PostgreSQL", "Docker", "GitHub Actions"],
+      links: [{ label: "Voir sur GitHub →", href: "https://github.com/MyAm-org/MyAm" }],
+    },
+    {
+      name: "rr-djuikoo.com",
+      descriptions: [
+        "Le site que vous lisez, et l'assistant qui l'accompagne : il répond en direct aux questions sur mon parcours, mes projets et mes compétences.",
+        "Tout ce qui le fait tourner, comme l'hébergement, le certificat, le nom de domaine et la base de données, est décrit dans du code versionné. Je peux détruire l'ensemble et le reconstruire à l'identique en une commande.",
+        "Rien ne part en ligne à la main : chaque modification passe par quatre analyses de sécurité automatiques, puis par une vérification que le contenu publié est bien celui qui a été testé.",
+      ],
+      tech: ["AWS", "Terraform", "CloudFront", "Lambda", "DynamoDB", "Bedrock"],
+      links: [{ label: "Voir sur GitHub →", href: "https://github.com/rr-djk/rr-djuikoo.com" }],
+    },
+    {
+      name: "GaugeInfra",
+      descriptions: [
+        "Outil qui répond à une question qu'on se pose d'habitude trop tard : combien va coûter cette infrastructure une fois en ligne ? Il lit le code d'infrastructure et estime la facture mensuelle avant tout déploiement.",
+        "Les montants sont calculés par du code déterministe, à partir des tarifs publiés par AWS. L'intelligence artificielle n'intervient qu'ensuite, sur des chiffres déjà établis, pour commenter les compromis entre coût et robustesse.",
+        "Projet toujours en cours de développement : l'analyseur de code est terminé et couvert par 164 tests, le calcul des coûts est en chantier et l'interface reste à faire.",
+      ],
+      tech: ["Python", "Terraform", "AWS", "Bedrock"],
+      links: [{ label: "Voir sur GitHub →", href: "https://github.com/rr-djk/GaugeInfra" }],
+    },
+  ],
+
+  education: [
+    {
+      degree: "Baccalauréat en Informatique et Génie Logiciel",
+      org: "Université du Québec à Montréal · Montréal, Québec",
+      dates: "Janvier 2025 – Août 2027",
+    },
+  ],
+
+  experience: [
+    {
+      role: "Opérateur EDM & CNC",
+      org: "Thermoplast Nextrusions (Laval, QC)",
+      descriptions: [
+        "Lecture et interprétation de dessins techniques pour la production de pièces de précision.",
+        "Usinage de pièces de précision sur machines CNC et EDM.",
+        "Calcul des tolérances dimensionnelles et inspection qualité des pièces usinées.",
+        "Maintenance préventive et entretien des équipements de production.",
+      ],
+      dates: "Janvier 2022 – Décembre 2024",
+    },
+  ],
+
+  certifications: [
+    {
+      name: "GitHub Advanced Security",
+      org: "Microsoft",
+      date: "Juillet 2026",
+      href: "https://learn.microsoft.com/api/credentials/share/en-us/RogerDjuikoo-7722/24DCA8893AE340CF?sharingId=C22FDBDC32CF2D66",
+    },
+    {
+      name: "Microsoft Certified: Security, Compliance, and Identity Fundamentals (SC-900)",
+      org: "Microsoft",
+      date: "Juin 2026",
+      href: "https://learn.microsoft.com/api/credentials/share/en-us/RogerDjuikoo-7722/AD5CEE405D23B599?sharingId=C22FDBDC32CF2D66",
+    },
+  ],
+
+  contact: {
+    items: [
+      { prefix: "Courriel", label: "rr_djuikoo@outlook.com", href: "mailto:rr_djuikoo@outlook.com" },
+      { prefix: "LinkedIn", label: "linkedin.com/in/rr-djuikoo", href: "https://www.linkedin.com/in/rr-djuikoo/" },
+      { prefix: "GitHub", label: "github.com/rr-djk", href: "https://github.com/rr-djk" },
+    ],
+  },
+
+  chat: {
+    welcome: [
+      "Bonjour, je suis Wags, Directeur des opérations de ce portfolio.",
+      "Mon rôle : te faire gagner du temps.",
+    ],
+    question: "Questions sur le parcours, les projets ou les compétences de mon employeur ?",
+    answer: "Je te réponds directement, clairement.",
+    placeholder: "Pose ta question à Wags",
+  },
+
+  footer: {
+    name: "Roger Djuikoo",
+  },
+};

@@ -57,6 +57,18 @@ data "aws_iam_policy_document" "chat" {
     ]
     resources = ["arn:aws:bedrock:us-east-1::foundation-model/global.anthropic.claude-haiku-4-5-20251001-v1:0"]
   }
+
+  # Portfolio content ships with the static site rather than with the Lambda
+  # package, so the agent reads it back from the site bucket. Scoped to that one
+  # object, not to the bucket.
+  statement {
+    sid    = "ReadSiteContent"
+    effect = "Allow"
+    actions = [
+      "s3:GetObject",
+    ]
+    resources = ["${aws_s3_bucket.site.arn}/content.json"]
+  }
 }
 
 resource "aws_iam_role_policy" "chat" {
