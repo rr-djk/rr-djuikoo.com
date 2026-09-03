@@ -110,11 +110,15 @@
     <section id="certifications" class="section">
       <h2 class="section-title">Certifications</h2>
       <div class="section-body">
-        <!-- TODO(content): certifications[] — one .cert-item per entry -->
+        <!-- TODO(content): certifications[] — reuses .experience-item, like Études,
+             so the link lines up exactly where the dates do. -->
         <template data-each="certifications">
-        <div class="cert-item">
-          <span class="cert-name">{{ name }}</span>
-          <span class="cert-meta">{{ org }} · {{ date }}</span>
+        <div class="experience-item">
+          <div class="experience-content">
+            <h3>{{ name }}</h3>
+            <p class="experience-org">{{ org }}</p>
+          </div>
+          <div class="experience-dates"><a href="{{ href }}" target="_blank" rel="noopener">Voir le certificat →</a></div>
         </div>
         </template>
       </div>

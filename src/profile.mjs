@@ -95,11 +95,13 @@ export default {
       name: "GitHub Advanced Security",
       org: "Microsoft",
       date: "Juillet 2026",
+      href: "https://learn.microsoft.com/api/credentials/share/en-us/RogerDjuikoo-7722/24DCA8893AE340CF?sharingId=C22FDBDC32CF2D66",
     },
     {
       name: "Microsoft Certified: Security, Compliance, and Identity Fundamentals (SC-900)",
       org: "Microsoft",
       date: "Juin 2026",
+      href: "https://learn.microsoft.com/api/credentials/share/en-us/RogerDjuikoo-7722/AD5CEE405D23B599?sharingId=C22FDBDC32CF2D66",
     },
   ],
 
@@ -122,6 +124,6 @@ export default {
   },
 
   footer: {
-    name: "[Ton Nom]",
+    name: "rr-djuikoo",
   },
 };

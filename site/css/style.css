@@ -290,24 +290,35 @@ input:focus-visible {
 
 /* Certifications */
 .cert-item {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
   padding: 16px 0;
   border-bottom: 1px solid var(--border);
 }
 .cert-item:last-child { border-bottom: none; }
 
+.cert-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .cert-name {
+  flex: 1;
+  min-width: 0;
   font-size: 15px;
   font-weight: 600;
   color: var(--text-main);
 }
 
-.cert-meta {
+.cert-org {
+  display: block;
   font-size: 13px;
   color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.cert-link {
+  font-size: 13px;
   white-space: nowrap;
 }
 
