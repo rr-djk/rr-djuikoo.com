@@ -77,3 +77,14 @@ resource "aws_lambda_permission" "chat_cloudfront" {
   source_arn             = aws_cloudfront_distribution.main.arn
   function_url_auth_type = "AWS_IAM"
 }
+
+# Invoking a function URL always needs lambda:InvokeFunction on top of
+# lambda:InvokeFunctionUrl; granting only the latter returns 403. The source_arn
+# keeps the grant scoped to this distribution.
+resource "aws_lambda_permission" "chat_cloudfront_invoke" {
+  statement_id  = "AllowCloudFrontInvokeFunction"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.chat.function_name
+  principal     = "cloudfront.amazonaws.com"
+  source_arn    = aws_cloudfront_distribution.main.arn
+}
