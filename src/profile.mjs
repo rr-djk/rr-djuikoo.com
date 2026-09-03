@@ -15,6 +15,13 @@ export default {
     lang: "fr",
     title: "Roger Djuikoo | Portfolio",
     description: "Portfolio de Roger Djuikoo, étudiant en informatique à l'UQAM.",
+    // Link previews (Open Graph): siteUrl carries no trailing slash and image
+    // starts with one, so the two concatenate into an absolute URL. LinkedIn
+    // and the other extractors ignore relative image paths.
+    siteUrl: "https://rr-djuikoo.com",
+    locale: "fr_CA",
+    image: "/assets/og-image.jpg",
+    imageAlt: "Roger Djuikoo, étudiant en informatique à l'UQAM",
   },
 
   identity: {

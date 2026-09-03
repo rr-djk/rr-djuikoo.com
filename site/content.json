@@ -2,7 +2,11 @@
   "meta": {
     "lang": "fr",
     "title": "Roger Djuikoo | Portfolio",
-    "description": "Portfolio de Roger Djuikoo, étudiant en informatique à l'UQAM."
+    "description": "Portfolio de Roger Djuikoo, étudiant en informatique à l'UQAM.",
+    "siteUrl": "https://rr-djuikoo.com",
+    "locale": "fr_CA",
+    "image": "/assets/og-image.jpg",
+    "imageAlt": "Roger Djuikoo, étudiant en informatique à l'UQAM"
   },
   "identity": {
     "name": "Roger Djuikoo",
