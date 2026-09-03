@@ -337,6 +337,22 @@ input:focus-visible {
   font-weight: 500;
 }
 
+.contact-bullets {
+  margin: 0 0 0 18px;
+  padding: 0;
+}
+
+.contact-bullets li {
+  font-size: 15px;
+  line-height: 1.75;
+  color: var(--text-main);
+  margin: 0 0 8px;
+}
+
+.contact-bullets li:last-child {
+  margin-bottom: 0;
+}
+
 .main-footer {
   padding-top: 32px;
   border-top: 1px solid var(--border);

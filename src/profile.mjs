@@ -106,10 +106,10 @@ export default {
   ],
 
   contact: {
-    emails: [{ label: "[ton@email.com]", href: "mailto:ton@email.com" }],
-    links: [
-      { label: "[LinkedIn →]", href: "#" },
-      { label: "[GitHub →]", href: "#" },
+    items: [
+      { prefix: "Courriel", label: "rr_djuikoo@outlook.com", href: "mailto:rr_djuikoo@outlook.com" },
+      { prefix: "LinkedIn", label: "linkedin.com/in/rr-djuikoo", href: "https://www.linkedin.com/in/rr-djuikoo/" },
+      { prefix: "GitHub", label: "github.com/rr-djk", href: "https://github.com/rr-djk" },
     ],
   },
 
@@ -124,6 +124,6 @@ export default {
   },
 
   footer: {
-    name: "rr-djuikoo",
+    name: "Roger Djuikoo",
   },
 };
