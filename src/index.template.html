@@ -20,15 +20,8 @@
   <main class="main-panel">
 
     <header class="hero">
-      <p class="eyebrow"><!-- TODO(content): identity.eyebrow -->{{ identity.eyebrow }}</p>
       <h1 class="hero-name"><!-- TODO(content): identity.name -->{{ identity.name }}</h1>
       <p class="hero-title"><!-- TODO(content): identity.title -->{{ identity.title }}</p>
-      <!-- TODO(content): identity.bio[] — one <p> per paragraph -->
-      <template data-each="identity.bio">
-      <p class="hero-bio">
-        {{ . }}
-      </p>
-      </template>
     </header>
 
     <nav class="section-nav" aria-label="Navigation des sections">

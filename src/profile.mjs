@@ -18,21 +18,19 @@ export default {
   },
 
   identity: {
-    eyebrow: "Montréal, QC",
     name: "Roger Djuikoo",
     title: "Étudiant en informatique à l'UQAM",
-    bio: ["Étudiant en informatique à l'UQAM, je construis progressivement mon profil autour du développement logiciel, de la sécurité et du cloud. Je m'intéresse particulièrement au DevSecOps, aux pipelines CI/CD et à AWS, et je cherche actuellement un stage où je pourrai continuer à apprendre, contribuer et relever de nouveaux défis."],
   },
 
   about: {
     paragraphs: [
       "J'ai toujours trouvé fascinant de comprendre comment fonctionnent les ordinateurs. Bien avant de connaître les détails techniques, l'idée de pouvoir programmer une machine et de comprendre ce qui se passe derrière un écran me plaisait déjà. Lorsque j'ai décidé d'entreprendre des études universitaires, l'informatique était naturellement le domaine vers lequel je voulais aller.",
-      "Je suis aujourd'hui étudiant en informatique à l'UQAM, où je construis mes bases en développement logiciel tout en explorant progressivement les domaines qui m'intéressent le plus. Je me dirige particulièrement vers le DevSecOps et le cloud, avec l'envie de comprendre l'ensemble du cycle de vie d'une application : la développer, la sécuriser, la tester et la déployer sur une infrastructure que je comprends réellement.",
+      "Je suis aujourd'hui **étudiant en informatique à l'UQAM**, où je construis mes bases en développement logiciel tout en explorant progressivement les domaines qui m'intéressent le plus. Je me dirige particulièrement vers le **DevSecOps et le cloud**, avec l'envie de comprendre l'ensemble du cycle de vie d'une application : *la développer, la sécuriser, la tester et la déployer* sur une infrastructure que je comprends réellement.",
       "Les pipelines CI/CD occupent actuellement une place importante dans mon apprentissage. J'aime leur rôle dans la livraison logicielle : c'est notamment à cette étape qu'on peut vérifier qu'une application répond aux attentes, détecter des vulnérabilités et automatiser suffisamment de contrôles pour rendre les déploiements plus fiables. J'y vois un problème à la fois technique et concret, et c'est un domaine dans lequel j'aime chercher des solutions.",
-      "Je développe également mes connaissances du cloud avec AWS, notamment à travers mes projets personnels et mon implication dans l'équipe AWS SBG Core de mon école. J'ai choisi de me concentrer sur AWS aussi parce que sa communauté montréalaise me permet de rencontrer des professionnels, d'assister à des événements et d'apprendre au-delà des cours.",
-      "Mes projets personnels me servent justement à mettre ces connaissances en pratique. Mon portfolio actuel rassemble une partie de ce que j'ai appris récemment, notamment autour de l'infrastructure as code, des CI/CD sécurisés, d'AWS et de l'intégration de l'IA dans des applications. Je m'intéresse aussi progressivement à la manière dont l'IA peut être utilisée comme un outil d'ingénierie, tout en gardant une approche critique : comparer les propositions, vérifier les sources et prendre mes décisions en fonction du problème que j'essaie réellement de résoudre.",
-      "Je ne cherche pas à tout maîtriser immédiatement. Je préfère avancer de manière méthodique, comprendre ce que je construis et continuer à améliorer mes compétences. Je suis actuellement à la recherche d'un stage en développement logiciel, DevOps ou DevSecOps, où je pourrai apprendre auprès d'une équipe expérimentée, contribuer concrètement et rencontrer des personnes dont je pourrai découvrir les façons de travailler.",
-      "Je suis encore au début de mon parcours, mais je sais que je veux continuer à progresser. Je suis discipliné, curieux et prêt à travailler pour devenir meilleur.",
+      "Je développe également mes connaissances du cloud avec AWS, notamment à travers mes projets personnels et mon implication dans **l'équipe AWS SBG Core de mon école**. J'ai choisi de me concentrer sur AWS aussi parce que sa communauté montréalaise me permet de rencontrer des professionnels, d'assister à des événements et d'apprendre au-delà des cours.",
+      "Mes projets personnels me servent justement à mettre ces connaissances en pratique. Mon portfolio actuel rassemble une partie de ce que j'ai appris récemment, notamment autour de l'infrastructure as code, des CI/CD sécurisés, d'AWS et de l'intégration de l'IA dans des applications. Je m'intéresse aussi progressivement à la manière dont l'IA peut être utilisée comme un outil d'ingénierie, tout *en gardant une approche critique* : comparer les propositions, vérifier les sources et prendre mes décisions en fonction du problème que j'essaie réellement de résoudre.",
+      "Je ne cherche pas à tout maîtriser immédiatement. Je préfère avancer de manière méthodique, comprendre ce que je construis et continuer à améliorer mes compétences. Je suis actuellement **à la recherche d'un stage en développement logiciel, DevOps ou DevSecOps**, où je pourrai apprendre auprès d'une équipe expérimentée, contribuer concrètement et rencontrer des personnes dont je pourrai découvrir les façons de travailler.",
+      "Je suis encore au début de mon parcours, mais je sais que je veux continuer à progresser. Je suis *discipliné, curieux et prêt à travailler pour devenir meilleur*.",
     ],
   },
 
