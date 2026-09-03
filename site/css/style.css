@@ -521,8 +521,12 @@ input:focus-visible {
   flex-shrink: 0;
   transition: background 0.15s ease;
 }
-#chat-form button:hover { background: #163d22; }
+#chat-form button:not(:disabled):hover { background: #163d22; }
 #chat-form button svg { width: 16px; height: 16px; }
+
+/* Locked while a reply streams: one request in flight at a time. */
+#chat-input:disabled { opacity: 0.6; cursor: not-allowed; }
+#chat-form button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .chat-disclaimer {
   text-align: center;

@@ -16,7 +16,36 @@ const AGENT_ENDPOINT = '/api/chat';
 const chatForm = document.getElementById('chat-form');
 const chatInput = document.getElementById('chat-input');
 const chatBody = document.getElementById('chat-body');
+const chatSubmitBtn = chatForm.querySelector('button[type="submit"]');
 const emptyState = document.querySelector('.chat-empty-state');
+
+// One request in flight at a time: the form stays locked until the reply stream
+// ends with `done`, with `error`, or with a failed fetch.
+let isBusy = false;
+
+/**
+ * Locks or unlocks the chat form while a reply is streaming.
+ * @param {boolean} busy - Whether a request is in flight.
+ */
+function setBusy(busy) {
+  isBusy = busy;
+  chatInput.disabled = busy;
+  chatSubmitBtn.disabled = busy;
+  chatInput.setAttribute('aria-busy', String(busy));
+  if (!busy) chatInput.focus();
+}
+
+/**
+ * Hashes a request body for CloudFront's SigV4 signature.
+ * Lambda function URLs reject unsigned payloads, so a POST through the CDN must
+ * carry the body hash in x-amz-content-sha256.
+ * @param {string} text - Exact body string that will be sent.
+ * @returns {Promise<string>} Lowercase hex SHA-256 digest.
+ */
+async function sha256Hex(text) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
 
 /**
  * Appends a chat message to the chat body.
@@ -70,13 +99,21 @@ async function readReply(targetEl, response) {
       targetEl.textContent += message.text;
       chatBody.scrollTop = chatBody.scrollHeight;
     } else if (message.type === "error") {
-      targetEl.textContent = message.text;
+      // Rate limiting comes back as a 200 with this code, not as an HTTP error.
+      targetEl.textContent =
+        message.code === "RATE_LIMITED"
+          ? "[Namespace] Trop de questions d'affilée. Réessaie dans quelques minutes."
+          : message.text;
+    } else if (message.type === "done") {
+      break;
     }
   }
 }
 
 chatForm.addEventListener('submit', async (e) => {
   e.preventDefault();
+  if (isBusy) return;
+
   const message = chatInput.value.trim();
   if (!message) return;
 
@@ -84,15 +121,24 @@ chatForm.addEventListener('submit', async (e) => {
   chatInput.value = '';
 
   const agentMessageEl = appendMessage('agent', '');
+  setBusy(true);
 
   try {
+    // The body is built once and reused verbatim: the hash must cover the exact
+    // bytes that are sent, or CloudFront's signature will not match.
+    const body = JSON.stringify({ message, sessionId });
     const response = await fetch(AGENT_ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, sessionId }),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Amz-Content-Sha256': await sha256Hex(body),
+      },
+      body,
     });
 
     if (!response.ok) {
+      const detail = await response.text();
+      console.error(`chat HTTP ${response.status}`, detail);
       throw new Error(`HTTP ${response.status}`);
     }
 
@@ -100,5 +146,7 @@ chatForm.addEventListener('submit', async (e) => {
   } catch (err) {
     agentMessageEl.textContent = "[Namespace] Error calling the agent.";
     console.error(err);
+  } finally {
+    setBusy(false);
   }
 });
