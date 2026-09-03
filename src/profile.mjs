@@ -40,7 +40,7 @@ export default {
       descriptions: [
         "Application mobile qui déchiffre les étiquettes alimentaires : on scanne un produit, elle en extrait la composition et alerte sur les allergènes selon le profil de la personne, ses intolérances et son régime.",
         "Projet universitaire mené à cinq, au sein duquel j'ai pris en charge l'authentification des utilisateurs et une partie de la protection des données.",
-        "J'ai également livré la fonctionnalité d'historique des scans, avec l'enregistrement sur l'appareil, leur consultation et leur export,, ainsi que l'onglet de lecture d'étiquette, tests compris.",
+        "J'ai également livré la fonctionnalité d'historique des scans, avec l'enregistrement sur l'appareil, leur consultation et leur export, ainsi que l'onglet de lecture d'étiquette, tests compris.",
         "Enfin, j'ai repris la chaîne de build de l'équipe : correction d'une trentaine de vulnérabilités héritées de nos dépendances, détection automatique des suivantes, et parallélisation des étapes de compilation.",
       ],
       tech: ["Flutter", "Spring Boot", "Java", "PostgreSQL", "Docker", "GitHub Actions"],
