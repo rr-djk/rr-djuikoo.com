@@ -6,15 +6,21 @@ build:
 serve: build
 	python3 -m http.server 8000 --directory site/
 
-# The Lambda package ships node_modules: the nodejs22.x runtime provides neither
-# @strands-agents/sdk nor zod, and nothing installs them at deploy time. The
-# stamp records which lockfile the installed tree came from, so both make and
-# the Terraform precondition can tell a stale tree from a current one.
+# AWS Lambda's nodejs22.x runtime lacks 'zod' and '@strands-agents/sdk', and AWS
+# won't install them at deploy time. We must package 'node_modules' inside the zip.
+# The .deps-stamp file saves the lockfile hash so 'make' and Terraform can detect
+# if 'node_modules' is missing or outdated before building the archive.
 agent/node_modules/.deps-stamp: agent/package.json agent/package-lock.json
 	npm ci --omit=dev --prefix agent
 	sha256sum agent/package-lock.json | cut -d' ' -f1 > $@
 
-agent-deps: agent/node_modules/.deps-stamp
+# Check actual file content, not just timestamps (mtime).
+# If the stamp hash does not match package-lock.json, delete the stamp
+# to force 'make' to re-run 'npm ci' and rebuild the dependencies cleanly.
+agent-deps:
+	@[ "$$(cat agent/node_modules/.deps-stamp 2>/dev/null)" = "$$(sha256sum agent/package-lock.json | cut -d' ' -f1)" ] \
+		|| rm -f agent/node_modules/.deps-stamp
+	@$(MAKE) --no-print-directory agent/node_modules/.deps-stamp
 
 plan: agent-deps
 	terraform -chdir=terraform plan -out=tfplan
