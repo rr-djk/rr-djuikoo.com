@@ -5,6 +5,15 @@ resource "aws_cloudfront_origin_access_control" "site" {
   signing_protocol                  = "sigv4"
 }
 
+# The chat function URL is AWS_IAM only, so CloudFront must sign every origin
+# request with SigV4. Without this OAC the URL answers 403.
+resource "aws_cloudfront_origin_access_control" "chat" {
+  name                              = "rr-djuikoo-chat"
+  origin_access_control_origin_type = "lambda"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+
 locals {
   chat_function_url_domain = replace(
     trimsuffix(aws_lambda_function_url.chat.function_url, "/"),
@@ -21,8 +30,10 @@ data "aws_cloudfront_cache_policy" "caching_disabled" {
   name = "Managed-CachingDisabled"
 }
 
-data "aws_cloudfront_origin_request_policy" "all_viewer" {
-  name = "Managed-AllViewer"
+# AllViewer forwards the viewer Host header, which invalidates the SigV4
+# signature on a function URL origin. This policy forwards everything but Host.
+data "aws_cloudfront_origin_request_policy" "all_viewer_except_host_header" {
+  name = "Managed-AllViewerExceptHostHeader"
 }
 
 data "aws_cloudfront_response_headers_policy" "security_headers" {
@@ -45,8 +56,9 @@ resource "aws_cloudfront_distribution" "main" {
   }
 
   origin {
-    domain_name = local.chat_function_url_domain
-    origin_id   = "chat"
+    domain_name              = local.chat_function_url_domain
+    origin_id                = "chat"
+    origin_access_control_id = aws_cloudfront_origin_access_control.chat.id
 
     custom_origin_config {
       http_port              = 80
@@ -76,7 +88,7 @@ resource "aws_cloudfront_distribution" "main" {
     compress               = true
 
     cache_policy_id          = data.aws_cloudfront_cache_policy.caching_disabled.id
-    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer.id
+    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer_except_host_header.id
   }
 
   restrictions {

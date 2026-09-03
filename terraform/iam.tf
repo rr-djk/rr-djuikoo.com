@@ -1,3 +1,5 @@
+data "aws_caller_identity" "current" {}
+
 data "aws_iam_policy_document" "lambda_assume" {
   statement {
     effect = "Allow"
@@ -14,6 +16,11 @@ data "aws_iam_policy_document" "lambda_assume" {
 resource "aws_iam_role" "chat" {
   name               = "rr-djuikoo-chat"
   assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
+}
+
+locals {
+  bedrock_foundation_model      = trimprefix(var.bedrock_model_id, "global.")
+  bedrock_inference_profile_arn = "arn:aws:bedrock:${var.aws_region}:${data.aws_caller_identity.current.account_id}:inference-profile/${var.bedrock_model_id}"
 }
 
 data "aws_iam_policy_document" "chat" {
@@ -48,14 +55,69 @@ data "aws_iam_policy_document" "chat" {
     resources = [aws_dynamodb_table.rate_limit.arn]
   }
 
+  # Global cross-region inference needs three distinct resources: the inference
+  # profile in the requesting region, the regional foundation model, and the
+  # global foundation model that makes the cross-region routing possible. The
+  # "global." prefix belongs to the profile only, never to a foundation model.
   statement {
-    sid    = "InvokeBedrock"
+    sid    = "InvokeBedrockInferenceProfile"
     effect = "Allow"
     actions = [
       "bedrock:InvokeModel",
       "bedrock:InvokeModelWithResponseStream",
     ]
-    resources = ["arn:aws:bedrock:us-east-1::foundation-model/global.anthropic.claude-haiku-4-5-20251001-v1:0"]
+    resources = [local.bedrock_inference_profile_arn]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestedRegion"
+      values   = [var.aws_region]
+    }
+  }
+
+  statement {
+    sid    = "InvokeBedrockRegionalModel"
+    effect = "Allow"
+    actions = [
+      "bedrock:InvokeModel",
+      "bedrock:InvokeModelWithResponseStream",
+    ]
+    resources = ["arn:aws:bedrock:${var.aws_region}::foundation-model/${local.bedrock_foundation_model}"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestedRegion"
+      values   = [var.aws_region]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "bedrock:InferenceProfileArn"
+      values   = [local.bedrock_inference_profile_arn]
+    }
+  }
+
+  statement {
+    sid    = "InvokeBedrockGlobalModel"
+    effect = "Allow"
+    actions = [
+      "bedrock:InvokeModel",
+      "bedrock:InvokeModelWithResponseStream",
+    ]
+    resources = ["arn:aws:bedrock:::foundation-model/${local.bedrock_foundation_model}"]
+
+    # The global resource carries no region, so the request reports "unspecified".
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestedRegion"
+      values   = ["unspecified"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "bedrock:InferenceProfileArn"
+      values   = [local.bedrock_inference_profile_arn]
+    }
   }
 
   # Portfolio content ships with the static site rather than with the Lambda

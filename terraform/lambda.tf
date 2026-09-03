@@ -3,11 +3,28 @@ resource "aws_cloudwatch_log_group" "chat" {
   retention_in_days = 7
 }
 
+# node_modules ships with the package on purpose: the nodejs22.x runtime does not
+# provide @strands-agents/sdk or zod, and nothing else installs them at deploy
+# time. A missing or stale tree would still zip cleanly and only surface as a
+# Runtime.ImportModuleError in production, so the precondition below refuses to
+# build the archive instead. Use `make plan`, which installs first. Only the .bin
+# symlinks are left out, since the handler never invokes them.
 data "archive_file" "chat" {
   type        = "zip"
   source_dir  = "${path.module}/../agent"
   output_path = "${path.module}/../agent.zip"
-  excludes    = ["node_modules"]
+  excludes    = ["node_modules/.bin"]
+
+  lifecycle {
+    precondition {
+      # `make agent-deps` writes the stamp with the hash of the lockfile it
+      # installed from, so a stale tree is caught as well as a missing one.
+      # try() rather than fileexists() && file(): HCL does not guarantee
+      # short-circuit evaluation, so the missing-file case must be caught here.
+      condition     = try(trimspace(file("${path.module}/../agent/node_modules/.deps-stamp")), "") == filesha256("${path.module}/../agent/package-lock.json")
+      error_message = "Dependances de l'agent absentes ou perimees: agent.zip partirait sans node_modules et la Lambda echouerait a l'init. Lance `make agent-deps` (ou `make plan`)."
+    }
+  }
 }
 
 resource "aws_s3_object" "chat_artifact" {
@@ -59,4 +76,15 @@ resource "aws_lambda_permission" "chat_cloudfront" {
   principal              = "cloudfront.amazonaws.com"
   source_arn             = aws_cloudfront_distribution.main.arn
   function_url_auth_type = "AWS_IAM"
+}
+
+# Invoking a function URL always needs lambda:InvokeFunction on top of
+# lambda:InvokeFunctionUrl; granting only the latter returns 403. The source_arn
+# keeps the grant scoped to this distribution.
+resource "aws_lambda_permission" "chat_cloudfront_invoke" {
+  statement_id  = "AllowCloudFrontInvokeFunction"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.chat.function_name
+  principal     = "cloudfront.amazonaws.com"
+  source_arn    = aws_cloudfront_distribution.main.arn
 }

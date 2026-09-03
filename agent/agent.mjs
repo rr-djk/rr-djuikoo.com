@@ -9,8 +9,12 @@ const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
   marshallOptions: { removeUndefinedValues: true },
 });
 
+// maxTokens is set on purpose: left unset, Bedrock reserves the model maximum
+// against the account quota on every call, which throttles even light traffic.
+// It also caps the cost of a single answer, and the prompt asks for brief ones.
 const model = new BedrockModel({
   modelId: process.env.BEDROCK_MODEL_ID ?? "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+  maxTokens: 1024,
 });
 
 async function loadHistory(sessionId) {
