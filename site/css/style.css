@@ -196,6 +196,22 @@ input:focus-visible {
   white-space: nowrap;
 }
 
+.project-bullets {
+  margin: 0 0 8px 18px;
+  padding: 0;
+}
+
+.project-bullets li {
+  font-size: 15px;
+  line-height: 1.75;
+  color: var(--text-main);
+  margin: 0 0 8px;
+}
+
+.project-bullets li:last-child {
+  margin-bottom: 0;
+}
+
 .tag-list {
   display: flex;
   flex-wrap: wrap;

@@ -59,10 +59,14 @@
           <div class="project-card-header">
             <h3>{{ name }}</h3>
             <template data-each="links">
-            <a href="{{ href }}" class="project-link">{{ label }}</a>
+            <a href="{{ href }}" class="project-link" target="_blank" rel="noopener">{{ label }}</a>
             </template>
           </div>
-          <p>{{ description }}</p>
+          <ul class="project-bullets">
+          <template data-each="descriptions">
+          <li>{{ . }}</li>
+          </template>
+          </ul>
           <ul class="tag-list">
             <template data-each="tech">
             <li>{{ . }}</li>

@@ -21,7 +21,7 @@
   <main class="main-panel">
 
     <header class="hero">
-      <p class="eyebrow">[Localisation / accroche courte]</p>
+      <p class="eyebrow">Montréal, QC</p>
       <h1 class="hero-name">[Prénom Nom]</h1>
       <p class="hero-title">[Titre professionnel]</p>
       <p class="hero-bio">
@@ -50,28 +50,58 @@
       <div class="section-body">
         <article class="project-card">
           <div class="project-card-header">
-            <h3>rr-djuikoo.com</h3>
-            <a href="https://rr-djuikoo.com" class="project-link">Voir le site →</a>
+            <h3>MyAm</h3>
+            <a href="https://github.com/MyAm-org/MyAm" class="project-link" target="_blank" rel="noopener">Voir sur GitHub →</a>
           </div>
-          <p>Portfolio personnel 70/30 avec chat Wags — S3 + CloudFront OAC + Lambda Function URL + Bedrock Haiku 4.5.</p>
+          <ul class="project-bullets">
+          <li>Application mobile qui déchiffre les étiquettes alimentaires : on scanne un produit, elle en extrait la composition et alerte sur les allergènes selon le profil de la personne, ses intolérances et son régime.</li>
+          <li>Projet universitaire mené à cinq, au sein duquel j&#39;ai pris en charge l&#39;authentification des utilisateurs et une partie de la protection des données.</li>
+          <li>J&#39;ai également livré la fonctionnalité d&#39;historique des scans, avec l&#39;enregistrement sur l&#39;appareil, leur consultation et leur export,, ainsi que l&#39;onglet de lecture d&#39;étiquette, tests compris.</li>
+          <li>Enfin, j&#39;ai repris la chaîne de build de l&#39;équipe : correction d&#39;une trentaine de vulnérabilités héritées de nos dépendances, détection automatique des suivantes, et parallélisation des étapes de compilation.</li>
+          </ul>
+          <ul class="tag-list">
+            <li>Flutter</li>
+            <li>Spring Boot</li>
+            <li>Java</li>
+            <li>PostgreSQL</li>
+            <li>Docker</li>
+            <li>GitHub Actions</li>
+          </ul>
+        </article>
+        <article class="project-card">
+          <div class="project-card-header">
+            <h3>rr-djuikoo.com</h3>
+            <a href="https://github.com/rr-djk/rr-djuikoo.com" class="project-link" target="_blank" rel="noopener">Voir sur GitHub →</a>
+          </div>
+          <ul class="project-bullets">
+          <li>Le site que vous lisez, et l&#39;assistant qui l&#39;accompagne : il répond en direct aux questions sur mon parcours, mes projets et mes compétences.</li>
+          <li>Tout ce qui le fait tourner, comme l&#39;hébergement, le certificat, le nom de domaine et la base de données, est décrit dans du code versionné. Je peux détruire l&#39;ensemble et le reconstruire à l&#39;identique en une commande.</li>
+          <li>Rien ne part en ligne à la main : chaque modification passe par quatre analyses de sécurité automatiques, puis par une vérification que le contenu publié est bien celui qui a été testé.</li>
+          </ul>
           <ul class="tag-list">
             <li>AWS</li>
             <li>Terraform</li>
-            <li>Lambda</li>
             <li>CloudFront</li>
+            <li>Lambda</li>
+            <li>DynamoDB</li>
             <li>Bedrock</li>
           </ul>
         </article>
         <article class="project-card">
           <div class="project-card-header">
-            <h3>Portfolio - Projets en cours</h3>
-            <a href="#projects" class="project-link">Voir la section →</a>
+            <h3>GaugeInfra</h3>
+            <a href="https://github.com/rr-djk/GaugeInfra" class="project-link" target="_blank" rel="noopener">Voir sur GitHub →</a>
           </div>
-          <p>Sections À propos / Projets / Études / Expérience / Certifications — contenu à compléter (TODO).</p>
+          <ul class="project-bullets">
+          <li>Outil qui répond à une question qu&#39;on se pose d&#39;habitude trop tard : combien va coûter cette infrastructure une fois en ligne ? Il lit le code d&#39;infrastructure et estime la facture mensuelle avant tout déploiement.</li>
+          <li>Les montants sont calculés par du code déterministe, à partir des tarifs publiés par AWS. L&#39;intelligence artificielle n&#39;intervient qu&#39;ensuite, sur des chiffres déjà établis, pour commenter les compromis entre coût et robustesse.</li>
+          <li>Projet toujours en cours de développement : l&#39;analyseur de code est terminé et couvert par 164 tests, le calcul des coûts est en chantier et l&#39;interface reste à faire.</li>
+          </ul>
           <ul class="tag-list">
-            <li>HTML</li>
-            <li>CSS</li>
-            <li>JavaScript</li>
+            <li>Python</li>
+            <li>Terraform</li>
+            <li>AWS</li>
+            <li>Bedrock</li>
           </ul>
         </article>
       </div>
