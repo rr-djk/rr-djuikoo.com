@@ -20,7 +20,7 @@ export default {
     // and the other extractors ignore relative image paths.
     siteUrl: "https://rr-djuikoo.com",
     locale: "fr_CA",
-    image: "/assets/og-image.png",
+    image: "/assets/og-image.jpg",
     imageAlt: "Roger Djuikoo, étudiant en informatique à l'UQAM",
   },
 
