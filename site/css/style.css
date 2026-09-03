@@ -265,6 +265,22 @@ input:focus-visible {
   margin: 0 0 8px;
 }
 
+.experience-bullets {
+  margin: 8px 0 0 18px;
+  padding: 0;
+}
+
+.experience-bullets li {
+  font-size: 15px;
+  line-height: 1.75;
+  color: var(--text-main);
+  margin: 0 0 8px;
+}
+
+.experience-bullets li:last-child {
+  margin-bottom: 0;
+}
+
 @media (max-width: 560px) {
   .experience-item {
     flex-direction: column;
