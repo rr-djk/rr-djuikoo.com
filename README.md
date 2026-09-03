@@ -21,7 +21,21 @@ pre-commit install           # active les hooks au commit
 pre-commit run --all-files   # prettier, gitleaks, terraform fmt/validate/tflint, build-site
 ```
 
-Sans backend local, le panneau de chat affiche `[Namespace] Error calling the agent.`; c'est le comportement attendu.
+Sans backend local, le panneau de chat affiche `[Namespace] Error calling the agent.`;
+c'est le comportement attendu. Le détail (statut HTTP, corps de la réponse) est
+écrit dans la console du navigateur, de quoi distinguer ce cas d'une vraie panne.
+
+```bash
+make agent-deps               # installe les deps de l'agent (no-op si deja a jour)
+make plan                     # agent-deps puis terraform plan -out=tfplan
+make apply                    # terraform apply tfplan
+```
+
+Le paquet Lambda embarque `node_modules` : les dépendances doivent être présentes
+et à jour au moment du `terraform plan`, sinon l'archive part sans elles et la
+fonction échoue à l'initialisation, renvoyant ce même message en production.
+`make plan` s'en charge, et une `precondition` Terraform fait échouer le plan
+plutôt que de construire une archive amputée.
 
 ## Architecture
 
