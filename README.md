@@ -1,74 +1,71 @@
 # rr-djuikoo.com
 
-Portfolio personnel avec panneau chat (agent **Wags**). Le site présente parcours, projets et certifications ; le chat répondra ensuite via une Lambda AWS + Bedrock.
+Portfolio personnel avec panneau chat (agent **Wags**). Le site présente parcours, projets et certifications; le chat répond via une Lambda AWS + Bedrock.
 
-> État actuel : frontend statique fonctionnel en local. L'IaC Terraform est amorcée
-> (bucket d'état S3 `rr-djuikoo-tf-state`, backends S3 configurés) mais aucune
-> ressource applicative n'est encore déployée (pas de `lambda/`). Le README sera
-> enrichi à chaque jalon.
+> **État** : site en production derrière CloudFront, chat branché sur une Lambda
+> en streaming vers Bedrock, déploiement du site automatisé après les analyses de
+> sécurité. L'infrastructure Terraform est appliquée manuellement.
 
 ## Prérequis
 
-- Python 3 (serveur statique local)
-- [pre-commit](https://pre-commit.com/) (hooks qualité/sécurité)
+- **Node.js**, pour le générateur et pour l'agent
+- **Python 3**, pour le serveur statique local
+- [pre-commit](https://pre-commit.com/), pour les hooks qualité et sécurité
+- Pour toucher à l'infrastructure : **Terraform 1.15.8**, AWS CLI, TFLint
 
 ## Démarrage local
 
 ```bash
-make serve
-# -> http://localhost:8000 (sert le dossier site/)
-```
-
-Autres commandes :
-
-```bash
+make serve                   # régénère site/ puis le sert sur :8000
 pre-commit install           # active les hooks au commit
-pre-commit run --all-files   # trailing-whitespace, prettier (yaml/json/md), gitleaks, check-toml, terraform_fmt/validate/tflint
+pre-commit run --all-files   # prettier, gitleaks, terraform fmt/validate/tflint, build-site
 ```
 
-## Structure
+Sans backend local, le panneau de chat affiche `[Namespace] Error calling the agent.`; c'est le comportement attendu.
+
+## Architecture
+
+Région `us-east-1`. Le bucket du site n'est jamais public, et la Lambda n'a le
+droit de lire qu'un seul objet, `content.json`. Réponses diffusées en NDJSON.
+
+## Gestion du contenu
+
+Le contenu est nécessaire dans la page HTML **et** dans le runtime de l'agent.
+Le dupliquer garantit qu'il divergera, l'embarquer dans le paquet Lambda impose
+un `terraform apply` à chaque correction de texte. D'où une source unique et
+deux artefacts générés :
 
 ```
-site/              # frontend vanilla — pas de build step
-  index.html       # 70% contenu (À propos, Projets, Études, Expérience, Certifications, Contact)
-  css/style.css    # tokens CSS, responsive, panneau chat 30% (#F5F0E1 / #1F4D2C)
-  js/main.js       # year + chat (/api/chat, sessionId par visite, readReply)
-terraform/
-  bootstrap/       # config du bucket d'état Terraform (rr-djuikoo-tf-state) - state sur S3
-  *.tf             # stack applicative - backend S3, pas encore de ressource (S3, CloudFront, Lambda, Bedrock à venir)
-Makefile           # cible serve
+src/profile.mjs ----------+
+                          |--> scripts/build-site.mjs --> site/index.html   (navigateurs, crawlers)
+src/index.template.html --+                          \--> site/content.json (lu depuis S3 par la Lambda)
 ```
 
-Le chat appelle `POST /api/chat` (`{ message, sessionId }`). Sans backend, la réponse affiche `[Namespace] Error calling the agent.` (comportement attendu).
+- `src/` n'est jamais déployé; `site/index.html` et `site/content.json` sont des
+  artefacts committés qui ne s'éditent **jamais** à la main.
+- `make build` régénère les deux. `make serve` en dépend, puis sert `site/` sur
+  http://localhost:8000.
+- Le hook pre-commit `build-site` rejoue le générateur et fait échouer le commit
+  si la sortie diffère : la dérive source/artefact est incommittable.
+- `content.json` part vers S3 avec le reste du site et est lu au runtime par
+  `agent/content.mjs` (cache 5 min), qui alimente les tools de l'agent à chaque
+  invocation. Éditer `src/profile.mjs` met donc à jour la page et **Wags** en même
+  temps, **sans `terraform apply`**.
+- Tout ce qui entre dans `profile.mjs` est publié : `content.json` est servi
+  publiquement. Aucune donnée privée ne doit y figurer.
 
-## Notes Infrastructure
+## CI/CD et sécurité
 
-> **Important** : la mise à jour de l'infrastructure AWS n'est gérée par aucun
-> workflow CI/CD. Les commandes Terraform (`init`, `plan`, `apply`, etc.) sont
-> lancées en local lorsque nécessaire. L'infrastructure actuelle étant figée
-> (aucune modification prévue à court terme), cette approche manuelle est
-> suffisante.
+Deux workflows, `permissions: {}` par défaut et actions épinglées par SHA.
 
-## Stack vérifiée
+**`Security Scan`** (PR et push sur `main`) : Trivy avec gate `HIGH/CRITICAL`,
+Semgrep, Gitleaks, et Checkov sur `terraform/**`.
 
-| Couche        | Techno                                                                                                                           |
-| ------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Frontend      | HTML/CSS/JS vanilla, Google Fonts Lora + Inter                                                                                   |
-| Serveur local | `python3 -m http.server` via `make serve`                                                                                        |
-| Qualité       | pre-commit (prettier, tflint), gitleaks                                                                                          |
-| CI            | GitHub Actions `Security Scan` sur PR → `main` (Trivy HIGH/CRITICAL gate + SARIF, Semgrep, Gitleaks, Checkov sur `terraform/**`) |
-
-Pas de `package.json`, pas de dépendances npm côté frontend. Le dossier `site/` contient 14 `TODO(content)` à remplir (contenu placeholder).
-
-## Cible d'architecture
-
-```
-Navigateur → CloudFront (rr-djuikoo.com)
-              ├── /, /static/* → S3 (OAC, privé)
-              └── /api/*       → Lambda Function URL (RESPONSE_STREAM) → Bedrock Claude Haiku 4.5
-```
-
-Rate limiting prévu via DynamoDB (20 req / 10 min / IP). Région cible `us-east-1`.
+**`Deploy Site`** ne démarre qu'après un `Security Scan` réussi sur `main`, sur
+le SHA exact qui a été scanné : archive attestée puis revérifiée avant envoi,
+sync vers S3, comparaison des empreintes, invalidation CloudFront. Accès AWS par
+OIDC, aucun secret de longue durée. L'infrastructure, elle, reste appliquée à la
+main en local.
 
 ## Licence
 

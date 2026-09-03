@@ -20,15 +20,8 @@
   <main class="main-panel">
 
     <header class="hero">
-      <p class="eyebrow"><!-- TODO(content): identity.eyebrow -->{{ identity.eyebrow }}</p>
       <h1 class="hero-name"><!-- TODO(content): identity.name -->{{ identity.name }}</h1>
       <p class="hero-title"><!-- TODO(content): identity.title -->{{ identity.title }}</p>
-      <!-- TODO(content): identity.bio[] — one <p> per paragraph -->
-      <template data-each="identity.bio">
-      <p class="hero-bio">
-        {{ . }}
-      </p>
-      </template>
     </header>
 
     <nav class="section-nav" aria-label="Navigation des sections">
@@ -59,10 +52,14 @@
           <div class="project-card-header">
             <h3>{{ name }}</h3>
             <template data-each="links">
-            <a href="{{ href }}" class="project-link">{{ label }}</a>
+            <a href="{{ href }}" class="project-link" target="_blank" rel="noopener">{{ label }}</a>
             </template>
           </div>
-          <p>{{ description }}</p>
+          <ul class="project-bullets">
+          <template data-each="descriptions">
+          <li>{{ . }}</li>
+          </template>
+          </ul>
           <ul class="tag-list">
             <template data-each="tech">
             <li>{{ . }}</li>
@@ -98,9 +95,11 @@
           <div class="experience-content">
             <h3>{{ role }}</h3>
             <p class="experience-org">{{ org }}</p>
+            <ul class="experience-bullets">
             <template data-each="descriptions">
-            <p>{{ . }}</p>
+            <li>{{ . }}</li>
             </template>
+            </ul>
           </div>
           <div class="experience-dates">{{ dates }}</div>
         </div>
@@ -111,11 +110,15 @@
     <section id="certifications" class="section">
       <h2 class="section-title">Certifications</h2>
       <div class="section-body">
-        <!-- TODO(content): certifications[] — one .cert-item per entry -->
+        <!-- TODO(content): certifications[] — reuses .experience-item, like Études,
+             so the link lines up exactly where the dates do. -->
         <template data-each="certifications">
-        <div class="cert-item">
-          <span class="cert-name">{{ name }}</span>
-          <span class="cert-meta">{{ org }} · {{ date }}</span>
+        <div class="experience-item">
+          <div class="experience-content">
+            <h3>{{ name }}</h3>
+            <p class="experience-org">{{ org }}</p>
+          </div>
+          <div class="experience-dates"><a href="{{ href }}" target="_blank" rel="noopener">Voir le certificat →</a></div>
         </div>
         </template>
       </div>
@@ -124,13 +127,9 @@
     <section id="contact" class="section">
       <h2 class="section-title">Contact</h2>
       <div class="section-body">
-        <ul class="contact-list">
-          <!-- TODO(content): contact.emails[] and contact.links[] -->
-          <template data-each="contact.emails">
-          <li><a href="{{ href }}">{{ label }}</a></li>
-          </template>
-          <template data-each="contact.links">
-          <li><a href="{{ href }}" target="_blank" rel="noopener">{{ label }}</a></li>
+        <ul class="contact-bullets">
+          <template data-each="contact.items">
+          <li>{{ prefix }} : <a href="{{ href }}" target="_blank" rel="noopener">{{ label }}</a></li>
           </template>
         </ul>
       </div>

@@ -33,6 +33,12 @@ const BANNER =
 
 const HTML_ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
 const PLACEHOLDER = /\{\{\s*([^}\s]+)\s*\}\}/g;
+// Inline emphasis, applied *after* escaping: by then every "<" is already
+// "&lt;", so <strong> and <em> are the only tags this generator can emit.
+// Consequence: never use an asterisk outside prose - in an attribute it would
+// produce broken markup.
+const BOLD = /\*\*([^*]+)\*\*/g;
+const ITALIC = /\*([^*]+)\*/g;
 const TEMPLATE_OPEN = /<template\b[^>]*\bdata-each="([^"]+)"[^>]*>/;
 // Authoring notes: kept in the template, stripped from the published page.
 const TODO_LINE = /^[ \t]*<!--\s*TODO\(content\)[^\n]*?-->[ \t]*\r?\n/gm;
@@ -42,6 +48,10 @@ const DANGLING_INDENT = /(^|\n)[ \t]+$/;
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (char) => HTML_ESCAPES[char]);
+}
+
+function emphasize(text) {
+  return text.replace(BOLD, "<strong>$1</strong>").replace(ITALIC, "<em>$1</em>");
 }
 
 function resolvePath(path, scope, rootScope) {
@@ -71,7 +81,7 @@ function interpolate(html, scope, rootScope) {
     if (value === undefined || value === null) {
       throw new Error(`Template path {{ ${path} }} resolved to ${value}`);
     }
-    return escapeHtml(value);
+    return emphasize(escapeHtml(value));
   });
 }
 
