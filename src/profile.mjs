@@ -129,8 +129,4 @@ export default {
     answer: "Je te réponds directement, clairement.",
     placeholder: "Pose ta question à Wags",
   },
-
-  footer: {
-    name: "Roger Djuikoo",
-  },
 };
