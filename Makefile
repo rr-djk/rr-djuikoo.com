@@ -1,10 +1,24 @@
-.PHONY: build serve agent-deps plan apply
+## --- Variables ---
+# Retrieve the first non-loopback local IP address for LAN access
+IP := $(shell hostname -I | awk '{print $$1}')
+# Use a dedicated port for dev testing to avoid conflicts with 'serve'
+DEV_PORT := 8001
+SITE_DIR := site
 
+.PHONY: build serve dev agent-deps plan apply
+
+## --- Build & Local Development ---
 build:
 	node scripts/build-site.mjs
 
 serve: build
 	python3 -m http.server 8000 --directory site/
+
+# Serve the site on the local network with QR code for quick mobile testing
+dev: build
+	@echo "Serving on http://$(IP):$(DEV_PORT)..."
+	@qrencode -t ansiutf8 "http://$(IP):$(DEV_PORT)"
+	python3 -m http.server $(DEV_PORT) --bind 0.0.0.0 --directory $(SITE_DIR)
 
 # AWS Lambda's nodejs22.x runtime lacks 'zod' and '@strands-agents/sdk', and AWS
 # won't install them at deploy time. We must package 'node_modules' inside the zip.
@@ -22,6 +36,7 @@ agent-deps:
 		|| rm -f agent/node_modules/.deps-stamp
 	@$(MAKE) --no-print-directory agent/node_modules/.deps-stamp
 
+## --- Infrastructure & Deployment ---
 plan: agent-deps
 	terraform -chdir=terraform plan -out=tfplan
 

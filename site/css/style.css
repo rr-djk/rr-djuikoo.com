@@ -56,7 +56,7 @@ input:focus-visible {
 }
 
 /* ==========================================================
-   LAYOUT — deux panneaux, 75% / 25%
+   LAYOUT — deux panneaux, 70% / 30%
    ========================================================== */
 .page {
   display: flex;
@@ -126,7 +126,10 @@ input:focus-visible {
 
 .section-nav {
   display: flex;
-  gap: 24px;
+  /* Six labels plus their gaps overflow the panel below ~943px, so the links
+     have to wrap well before the stacked layout kicks in. */
+  flex-wrap: wrap;
+  gap: 12px 24px;
   padding: 16px 0;
   margin-bottom: 40px;
   border-top: 1px solid var(--border);
@@ -141,6 +144,13 @@ input:focus-visible {
 .section-nav a:hover {
   color: var(--chat-accent);
   text-decoration: none;
+}
+
+/* Only useful once the chat panel is stacked below the content. Hidden here
+   rather than shown by a min-width query: the file uses max-width only, and
+   mixing both directions leaves a gap at fractional widths (900.5px). */
+.section-nav .nav-chat {
+  display: none;
 }
 
 .section {
@@ -286,6 +296,11 @@ input:focus-visible {
     flex-direction: column;
     gap: 4px;
   }
+
+  .project-card-header {
+    flex-direction: column;
+    gap: 4px;
+  }
 }
 
 /* Certifications */
@@ -351,16 +366,6 @@ input:focus-visible {
 
 .contact-bullets li:last-child {
   margin-bottom: 0;
-}
-
-.main-footer {
-  padding-top: 32px;
-  border-top: 1px solid var(--border);
-}
-.main-footer p {
-  font-size: 13px;
-  color: var(--text-muted);
-  margin: 0;
 }
 
 /* ==========================================================
@@ -497,11 +502,15 @@ input:focus-visible {
 
 #chat-input {
   flex: 1;
+  /* Without this the field refuses to shrink below its placeholder width and
+     pushes the send button out of the panel on narrow viewports. */
+  min-width: 0;
   border: none;
   outline: none;
   background: transparent;
   font-family: var(--font-body);
-  font-size: 14px;
+  /* Safari iOS zooms the page in when a focused field is under 16px. */
+  font-size: 16px;
   color: var(--text-main);
   padding: 10px 0;
 }
@@ -533,4 +542,99 @@ input:focus-visible {
   font-size: 11.5px;
   color: var(--chat-text-muted);
   margin: 12px 0 0;
+}
+
+/* ==========================================================
+   RESPONSIF — empilement vertical sous 900px
+   ========================================================== */
+/* 900px is where the 30% chat column drops to 270px, roughly 28 characters per
+   bubble line. The literal cannot be a token: custom properties do not work
+   inside a media condition. This block sits last because a media query carries
+   no specificity bonus — it only wins on source order. */
+@media (max-width: 900px) {
+  .page {
+    flex-direction: column;
+  }
+
+  /* flex: none is required, not cosmetic: in a column, the 70%/30% bases would
+     resolve against the height of .page, not its width. */
+  .main-panel {
+    flex: none;
+    width: 100%;
+    padding: 32px 20px 40px;
+  }
+
+  .chat-panel {
+    flex: none;
+    width: 100%;
+    position: static;
+    /* height must go back to auto: min-height only raises a fixed height, it
+       does not override it. Without a floor, .chat-body collapses to 0 — it is
+       flex-basis 0 with a non-visible overflow, so its automatic minimum is 0.
+       The dvh line is dropped whole by browsers that predate the unit, which
+       leaves the vh value in place. */
+    height: auto;
+    min-height: 50vh;
+    min-height: max(320px, 50dvh);
+    /* Without a ceiling the panel grows with the conversation, pushing the
+       input bar off screen and making main.js's scrollTop follow a no-op.
+       In landscape the floor above wins, which is the intended order. */
+    max-height: 70vh;
+    max-height: 70dvh;
+    border-left: none;
+    border-top: 3px solid #000;
+  }
+
+  /* Align the chat gutters on the main panel, or the text column visibly
+     shifts at the seam between the two panels. */
+  .chat-body,
+  .chat-input-bar {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .hero {
+    margin-bottom: 32px;
+  }
+
+  .hero-name {
+    font-size: 32px;
+  }
+
+  .section-nav {
+    /* The pill is taller than the plain links; without this they stretch to
+       its height and their text stays pinned to the top of the stretched box. */
+    align-items: center;
+    gap: 10px 16px;
+    margin-bottom: 28px;
+  }
+
+  /* Solid green marks the chat as a different kind of destination among the
+     section links. Same green as the send button, not the soft pill used for
+     the project tags. */
+  .section-nav .nav-chat {
+    display: block;
+    padding: 6px 14px;
+    border-radius: 999px;
+    color: #fff;
+    background: var(--chat-accent);
+  }
+
+  /* The shared .section-nav a:hover repaints the text in --chat-accent, which
+     would be invisible on this background. */
+  .section-nav .nav-chat:hover {
+    color: #fff;
+    background: #163d22;
+  }
+
+  .section {
+    margin-bottom: 40px;
+    padding-top: 28px;
+  }
+
+  /* Full-width panel: 88% alone would stretch a bubble to 750px between 561px
+     and 900px and erase the left/right conversation cue. */
+  .chat-message {
+    max-width: min(88%, 480px);
+  }
 }

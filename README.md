@@ -24,6 +24,7 @@ CloudFront distribue le site statique stocké sur S3 et achemine les appels `/ap
 
 - Node.js (génération du site et dépendances de l'agent)
 - Python 3 (serveur statique local)
+- qrencode (génération du QR code pour les tests sur réseau local)
 - pre-commit (validation du code et des configurations)
 - Terraform 1.15.8 (gestion de l'infrastructure AWS)
 
