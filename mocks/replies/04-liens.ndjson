@@ -1,0 +1,24 @@
+{"type": "token", "text": "## Liens\n\n"}
+{"type": "token", "text": "Voici un lien "}
+{"type": "token", "text": "classique : "}
+{"type": "token", "text": "[mon portfolio]"}
+{"type": "token", "text": "(https://rr-djuikoo.com).\n\n"}
+{"type": "token", "text": "Voici une URL "}
+{"type": "token", "text": "brute qui doit "}
+{"type": "token", "text": "être auto-liée "}
+{"type": "token", "text": "(GFM) : "}
+{"type": "token", "text": "https://github.com/"}
+{"type": "token", "text": "rr-djk/rr-djuikoo.com\n\n"}
+{"type": "token", "text": "Et voici une URL "}
+{"type": "token", "text": "très longue, sans "}
+{"type": "token", "text": "espace, pour vérifier "}
+{"type": "token", "text": "le retour à la "}
+{"type": "token", "text": "ligne forcé : "}
+{"type": "token", "text": "https://exemple.fr/une/tres/longue/"}
+{"type": "token", "text": "url/sans/aucun/espace/qui/doit/"}
+{"type": "token", "text": "forcer/le/word-break/dans/le/"}
+{"type": "token", "text": "panneau/de/chat/afin/eviter/"}
+{"type": "token", "text": "le/debordement/horizontal/1234567890\n\n"}
+{"type": "token", "text": "Fin du test "}
+{"type": "token", "text": "de liens."}
+{"type": "done"}

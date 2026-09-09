@@ -1,0 +1,29 @@
+{"type": "token", "text": "## Test "}
+{"type": "token", "text": "de tokens "}
+{"type": "token", "text": "coupés\n\n"}
+{"type": "token", "text": "Je suis *"}
+{"type": "token", "text": "*Wags**, "}
+{"type": "token", "text": "l'assistant "}
+{"type": "token", "text": "du site. "}
+{"type": "token", "text": "Voici [mon "}
+{"type": "token", "text": "lien](https://exemple.fr) "}
+{"type": "token", "text": "préféré.\n\n"}
+{"type": "token", "text": "Exemple de "}
+{"type": "token", "text": "code coupé "}
+{"type": "token", "text": "en plein "}
+{"type": "token", "text": "milieu :\n\n"}
+{"type": "token", "text": "```\necho "}
+{"type": "token", "text": "\"ligne 1\"\n"}
+{"type": "token", "text": "echo "}
+{"type": "token", "text": "\"lig"}
+{"type": "token", "text": "ne 2\"\n"}
+{"type": "token", "text": "echo "}
+{"type": "token", "text": "\"ligne "}
+{"type": "token", "text": "3\"\n"}
+{"type": "token", "text": "```\n\n"}
+{"type": "token", "text": "Fin du "}
+{"type": "token", "text": "test de "}
+{"type": "token", "text": "robustesse "}
+{"type": "token", "text": "du "}
+{"type": "token", "text": "streaming."}
+{"type": "done"}

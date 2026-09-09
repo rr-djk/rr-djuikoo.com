@@ -1,0 +1,30 @@
+{"type": "token", "text": "## Blocs "}
+{"type": "token", "text": "de code\n\n"}
+{"type": "token", "text": "Voici du "}
+{"type": "token", "text": "`code inline` "}
+{"type": "token", "text": "dans une phrase.\n\n"}
+{"type": "token", "text": "Un court "}
+{"type": "token", "text": "exemple :\n\n"}
+{"type": "token", "text": "```\nnpm "}
+{"type": "token", "text": "install\n"}
+{"type": "token", "text": "make build\n"}
+{"type": "token", "text": "```\n\n"}
+{"type": "token", "text": "Et une commande "}
+{"type": "token", "text": "volontairement très "}
+{"type": "token", "text": "longue sur une "}
+{"type": "token", "text": "seule ligne, pour "}
+{"type": "token", "text": "vérifier le "}
+{"type": "token", "text": "défilement "}
+{"type": "token", "text": "horizontal :\n\n"}
+{"type": "token", "text": "```\ncurl -s -X POST "}
+{"type": "token", "text": "https://exemple.fr/api/tres/longue/commande "}
+{"type": "token", "text": "--header \"Content-Type: "}
+{"type": "token", "text": "application/json\" "}
+{"type": "token", "text": "--data '{\"cle\":\"valeur\","}
+{"type": "token", "text": "\"autre_cle\":\"une_valeur_"}
+{"type": "token", "text": "assez_longue_pour_forcer_"}
+{"type": "token", "text": "le_scroll_horizontal\"}'\n"}
+{"type": "token", "text": "```\n\n"}
+{"type": "token", "text": "Fin du test "}
+{"type": "token", "text": "de code."}
+{"type": "done"}

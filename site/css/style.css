@@ -486,6 +486,98 @@ input:focus-visible {
   border-bottom-left-radius: 4px;
 }
 
+/* Markdown rendered inside an agent bubble (main.js renderMarkdown). Element
+   default margins are reset on the first/last child, or they stack on top of
+   the bubble's own padding. */
+.chat-message.agent > *:first-child { margin-top: 0; }
+.chat-message.agent > *:last-child { margin-bottom: 0; }
+
+.chat-message.agent p {
+  margin: 0 0 8px;
+}
+
+.chat-message.agent h1,
+.chat-message.agent h2,
+.chat-message.agent h3,
+.chat-message.agent h4,
+.chat-message.agent h5,
+.chat-message.agent h6 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 10px 0 6px;
+}
+
+.chat-message.agent ul,
+.chat-message.agent ol {
+  margin: 0 0 8px;
+  padding-left: 20px;
+}
+
+.chat-message.agent code {
+  font-family: monospace;
+  background: var(--chat-accent-soft);
+  border-radius: 4px;
+  padding: 1px 4px;
+  font-size: 0.9em;
+}
+
+.chat-message.agent pre {
+  /* A code block wider than the 30%-wide panel must scroll, not overflow it. */
+  overflow-x: auto;
+  margin: 0 0 8px;
+  /* Without a ground of its own a fenced block reads as an ordinary
+     paragraph: only the font would set it apart. */
+  background: var(--chat-accent-soft);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+}
+
+.chat-message.agent pre code {
+  background: none;
+  padding: 0;
+}
+
+.chat-message.agent a {
+  text-decoration: underline;
+  /* A long, unbroken URL otherwise pushes past the bubble, especially under
+     the 900px stacked layout. */
+  word-break: break-word;
+}
+
+.chat-message.agent table {
+  display: block;
+  overflow-x: auto;
+  margin: 0 0 8px;
+}
+
+.chat-message.agent th,
+.chat-message.agent td {
+  border: 1px solid var(--chat-border);
+  padding: 4px 8px;
+  font-size: 13px;
+}
+
+.chat-message.agent blockquote {
+  margin: 0 0 8px;
+  padding-left: 10px;
+  border-left: 2px solid var(--chat-border);
+}
+
+/* Blinking caret shown at the end of a bubble while it streams. A CSS
+   pseudo-element, not a character appended to the Markdown string: injecting
+   one there would break whatever syntax is mid-parse. */
+.chat-message.is-streaming::after {
+  content: '';
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: currentColor;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: chat-caret 1s step-end infinite;
+}
+@keyframes chat-caret { 50% { opacity: 0; } }
+
 .chat-input-bar {
   padding: 16px 24px 24px;
 }

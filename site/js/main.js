@@ -14,6 +14,37 @@ const chatBody = document.getElementById('chat-body');
 const chatSubmitBtn = chatForm.querySelector('button[type="submit"]');
 const emptyState = document.querySelector('.chat-empty-state');
 
+// `breaks: true` makes single newlines render as <br>, matching how the agent
+// actually formats its replies.
+marked.use({ gfm: true, breaks: true });
+
+// Tags the agent's reply can legitimately use. `img` is deliberately absent:
+// the agent has no reason to emit one, and an inline image would blow past
+// the 30%-wide chat bubble.
+const ALLOWED_TAGS = [
+  'p', 'br', 'strong', 'em', 'del', 'code', 'pre', 'hr', 'blockquote',
+  'ul', 'ol', 'li', 'a', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+  'table', 'thead', 'tbody', 'tr', 'th', 'td',
+];
+const ALLOWED_ATTR = ['href'];
+
+// Links in the agent's reply should not navigate the chat away from the page.
+DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+  if (node.tagName === 'A') {
+    node.setAttribute('target', '_blank');
+    node.setAttribute('rel', 'noopener noreferrer');
+  }
+});
+
+/**
+ * Renders Markdown to sanitized HTML safe for innerHTML.
+ * @param {string} text - Raw Markdown text.
+ * @returns {string} Sanitized HTML.
+ */
+function renderMarkdown(text) {
+  return DOMPurify.sanitize(marked.parse(text), { ALLOWED_TAGS, ALLOWED_ATTR });
+}
+
 // One request in flight at a time: the form stays locked until the reply stream
 // ends with `done`, with `error`, or with a failed fetch.
 let isBusy = false;
@@ -89,19 +120,47 @@ async function* parseNDJSONStream(response) {
  * @returns {Promise<void>}
  */
 async function readReply(targetEl, response) {
-  for await (const message of parseNDJSONStream(response)) {
-    if (message.type === "token") {
-      targetEl.textContent += message.text;
-      chatBody.scrollTop = chatBody.scrollHeight;
-    } else if (message.type === "error") {
-      // Rate limiting comes back as a 200 with this code, not as an HTTP error.
-      targetEl.textContent =
-        message.code === "RATE_LIMITED"
-          ? "[Namespace] Trop de questions d'affilée. Réessaie dans quelques minutes."
-          : message.text;
-    } else if (message.type === "done") {
-      break;
+  // Accumulates raw Markdown, never HTML: marked is stateless between calls,
+  // so re-parsing the whole string on each frame safely closes any `**` (or
+  // other syntax) left open by a token cut mid-stream.
+  let markdown = '';
+  let frame = 0;
+
+  const flush = () => {
+    frame = 0;
+    targetEl.innerHTML = renderMarkdown(markdown);
+    chatBody.scrollTop = chatBody.scrollHeight;
+  };
+  // Groups multiple incoming tokens to parse and update the DOM once per frame
+  // instead of on every token.
+  const schedule = () => {
+    if (!frame) frame = requestAnimationFrame(flush);
+  };
+
+  targetEl.classList.add('is-streaming');
+  try {
+    for await (const message of parseNDJSONStream(response)) {
+      if (message.type === "token") {
+        markdown += message.text;
+        schedule();
+      } else if (message.type === "error") {
+        // Rate limiting comes back as a 200 with this code, not as an HTTP error.
+        markdown =
+          message.code === "RATE_LIMITED"
+            ? "[Namespace] Trop de questions d'affilée. Réessaie dans quelques minutes."
+            : message.text;
+        schedule();
+      } else if (message.type === "done") {
+        break;
+      }
     }
+  } finally {
+    // Cancel any pending frame before the final flush: otherwise a stray rAF
+    // could later overwrite the error message the `submit` handler's catch
+    // writes into this same element.
+    if (frame) cancelAnimationFrame(frame);
+    flush();
+    targetEl.classList.remove('is-streaming');
   }
 }
 
