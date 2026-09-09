@@ -17,7 +17,9 @@ Ce workflow s'exécute avec des permissions réinitialisées (`permissions: {}`)
 
 ### Jobs d'analyse
 
-- **Trivy (`sca`)** : analyse les dépendances. Échoue en cas de vulnérabilité de niveau `HIGH` ou `CRITICAL`. Génère un rapport SARIF complet.
+- **Trivy (`sca`)** :
+  - Analyse les vulnérabilités dans les dépendances de l'agent (`agent/package-lock.json`) et du frontend (`package-lock.json`). Échoue en cas de sévérité `HIGH` ou `CRITICAL`. Génère un rapport SARIF complet.
+  - **Vérification de l'alignement Vendor** : Exécute une étape vérifiant que les bibliothèques JS exécutées par le navigateur dans `site/js/vendor/` correspondent exactement au fichier `package-lock.json` audité par Trivy (`npm ci && npm run vendor && git diff --exit-code site/js/vendor/`). Cela prévient tout décalage en cas de mise à jour des dépendances, y compris pour une pull request créée par API sans passer par les hooks pre-commit, comme le ferait Dependabot s'il était activé sur ce dépôt.
 - **Semgrep (`sast`)** : exécute une analyse statique de code avec le jeu de règles `p/ci` (version 1.172.0).
 - **Gitleaks (`secrets`)** : analyse l'historique git pour détecter d'éventuels jetons, clés ou mots de passe.
 - **Checkov (`iac`)** : analyse les fichiers Terraform du dossier `terraform/`. Se déclenche uniquement si des fichiers d'infrastructure ont été modifiés (`dorny/paths-filter`).

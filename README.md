@@ -6,6 +6,7 @@ Portfolio personnel avec assistant virtuel intégré (agent Wags). Le site prés
 
 - Consultation du parcours professionnel, des projets et des certifications.
 - Panneau de chat interactif alimenté par l'agent Wags (réponses en streaming via Amazon Bedrock).
+- Rendu riche en Markdown des réponses de l'agent (titres, listes, blocs de code, tableaux) sécurisé contre les XSS via sanitization HTML.
 - Génération statique à partir d'une source de contenu unique et infrastructure as code.
 
 ## Architecture
@@ -22,8 +23,8 @@ CloudFront distribue le site statique stocké sur S3 et achemine les appels `/ap
 
 ### Prérequis
 
-- Node.js (génération du site et dépendances de l'agent)
-- Python 3 (serveur statique local)
+- Node.js 20 ou plus (génération du site, dépendances de l'agent et du frontend)
+- Python 3 (serveur statique local et backend mock de test)
 - qrencode (génération du QR code pour les tests sur réseau local)
 - pre-commit (validation du code et des configurations)
 - Terraform 1.15.8 (gestion de l'infrastructure AWS)
@@ -32,8 +33,9 @@ CloudFront distribue le site statique stocké sur S3 et achemine les appels `/ap
 
 ```bash
 make serve                   # régénère site/ puis lance le serveur sur http://localhost:8000
+make mock                    # lance le site avec un backend mock simulant l'agent sur http://localhost:8002
 pre-commit install           # installe les hooks de contrôle local
-pre-commit run --all-files   # exécute tous les vérificateurs (linter, formatage, sécurité)
+pre-commit run --all-files   # exécute tous les vérificateurs (linter, formatage, sécurité, vendor)
 ```
 
 Pour l'infrastructure, les commandes `make plan` et `make apply` permettent d'inspecter et de déployer les ressources AWS.

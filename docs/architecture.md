@@ -72,7 +72,30 @@ Browser
 ### Frontend (`site/`)
 
 - HTML, CSS et JavaScript natifs sans framework externe.
-- Le fichier `site/js/main.js` gère la communication asynchrone avec l'API, le verrouillage de l'interface pendant le traitement et le traitement du flux NDJSON (`parseNDJSONStream`).
+- **Rendu Markdown & Sanitization** :
+  - Utilise `marked` (v18) et `DOMPurify` (v3) vendorisés localement (`site/js/vendor/`).
+  - Configuration GFM avec retours à la ligne explicites (`breaks: true`).
+  - Sanitization stricte (`DOMPurify`) sur une liste blanche de balises (`p`, `code`, `pre`, `ul`, `ol`, `table`, etc.), interdisant l'injection d'images inline (`img`) et forçant `target="_blank" rel="noopener noreferrer"` sur tous les liens hypertextes.
+- **Gestion du flux NDJSON & Batching d'affichage** :
+  - `site/js/main.js` accumule le Markdown **brut** au fil de la réception du flux NDJSON (`parseNDJSONStream`), jamais du HTML, et re-parse la chaîne complète à chaque rendu. `marked` étant sans état entre deux appels, une syntaxe coupée entre deux tokens (`**`, un lien, une fence) se referme correctement au token suivant. C'est ce mécanisme, et lui seul, qui assure la justesse du rendu pendant le streaming.
+  - Le rendu HTML et la sanitization sont ensuite planifiés par image via `requestAnimationFrame`, ce qui regroupe une rafale de tokens en une seule écriture DOM. Il s'agit d'une optimisation, indépendante de la justesse du rendu assurée par le point précédent.
+  - Un curseur clignotant CSS (`.chat-message.is-streaming::after`) signale visuellement le streaming actif.
+
+### Dépendances front (`site/js/vendor/`)
+
+Pour permettre à Trivy d'analyser les vulnérabilités des bibliothèques JavaScript chargées par le navigateur sans ajouter de bundler (Webpack/Vite), les dépendances `marked` et `dompurify` sont déclarées dans `package.json` à la racine. Les fichiers de `site/js/vendor/` sont, comme `site/index.html` et `site/content.json`, des artefacts générés et committés : ils ne doivent jamais être édités à la main.
+
+- La commande `make vendor` (déclenchée automatiquement par le hook pre-commit `vendor-deps` dès que `package.json`, `package-lock.json` ou `site/js/vendor/` changent) copie les builds navigateur depuis `node_modules/` vers `site/js/vendor/`. Ce sont deux modules UMD, chargés par de simples balises `<script>` : `marked.umd.js`, non minifié, et `purify.min.js`.
+- Le fichier `node_modules/.deps-stamp` enregistre l'empreinte SHA-256 de `package-lock.json`. Il compare volontairement le contenu et non les dates de modification, jugées peu fiables, et garantit ainsi que `node_modules` correspond au lockfile avant toute copie. La fraîcheur de `site/js/vendor/` est vérifiée séparément, par le hook `vendor-deps` et par l'étape d'alignement en CI.
+- Le fichier `.npmrc` applique `save-exact=true`, `ignore-scripts=true` et `audit-level=moderate`.
+
+### Environnement de test local (`make mock`)
+
+Pour tester le rendu du chat sans consommer de tokens Bedrock ni nécessiter d'accès AWS :
+
+- Un serveur HTTP/1.1 Python (`mocks/server.py`) sert les fichiers statiques de `site/` et intercepte `POST /api/chat`.
+- Le serveur simule la réponse de la Lambda en transmettant des données NDJSON streamées (`Transfer-Encoding: chunked`).
+- Un jeu de 7 fixtures (`mocks/replies/`) rejoue en rotation les cas limites de rendu (mise en forme, blocs de code, tableaux, liens, coupures de tokens mi-mot, tentatives d'injection XSS).
 
 ### Runtime Agent (`agent/`)
 
