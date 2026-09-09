@@ -1,0 +1,32 @@
+{"type": "token", "text": "## Listes\n\n"}
+{"type": "token", "text": "Liste à "}
+{"type": "token", "text": "puces :\n\n"}
+{"type": "token", "text": "- Site "}
+{"type": "token", "text": "statique\n"}
+{"type": "token", "text": "- Backend "}
+{"type": "token", "text": "serverless\n"}
+{"type": "token", "text": "- Chat en "}
+{"type": "token", "text": "streaming\n\n"}
+{"type": "token", "text": "Liste "}
+{"type": "token", "text": "numérotée :\n\n"}
+{"type": "token", "text": "1. Cloner "}
+{"type": "token", "text": "le dépôt\n"}
+{"type": "token", "text": "2. Installer "}
+{"type": "token", "text": "les dépendances\n"}
+{"type": "token", "text": "3. Lancer "}
+{"type": "token", "text": "`make build`\n\n"}
+{"type": "token", "text": "Liste "}
+{"type": "token", "text": "imbriquée :\n\n"}
+{"type": "token", "text": "- Frontend\n"}
+{"type": "token", "text": "  - HTML "}
+{"type": "token", "text": "et CSS\n"}
+{"type": "token", "text": "  - JavaScript "}
+{"type": "token", "text": "vanilla\n"}
+{"type": "token", "text": "- Backend\n"}
+{"type": "token", "text": "  - Lambda "}
+{"type": "token", "text": "Node.js\n"}
+{"type": "token", "text": "  - Agent "}
+{"type": "token", "text": "Strands\n\n"}
+{"type": "token", "text": "Fin du test "}
+{"type": "token", "text": "de listes."}
+{"type": "done"}

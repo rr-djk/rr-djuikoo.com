@@ -1,0 +1,24 @@
+{"type": "token", "text": "## Rendu "}
+{"type": "token", "text": "des titres\n\n"}
+{"type": "token", "text": "Voici la mise "}
+{"type": "token", "text": "en forme : "}
+{"type": "token", "text": "**texte en "}
+{"type": "token", "text": "gras**, "}
+{"type": "token", "text": "*texte en "}
+{"type": "token", "text": "italique* "}
+{"type": "token", "text": "et ~~texte "}
+{"type": "token", "text": "barré~~.\n\n"}
+{"type": "token", "text": "### Sous-titre\n\n"}
+{"type": "token", "text": "Cette phrase "}
+{"type": "token", "text": "contient un "}
+{"type": "token", "text": "retour simple\n"}
+{"type": "token", "text": "placé au milieu, "}
+{"type": "token", "text": "pour vérifier "}
+{"type": "token", "text": "le rendu des "}
+{"type": "token", "text": "sauts de ligne "}
+{"type": "token", "text": "uniques (option "}
+{"type": "token", "text": "`breaks: true`).\n\n"}
+{"type": "token", "text": "Fin du test "}
+{"type": "token", "text": "de titres "}
+{"type": "token", "text": "et d'emphases."}
+{"type": "done"}

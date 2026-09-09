@@ -1,0 +1,25 @@
+{"type": "token", "text": "## Test "}
+{"type": "token", "text": "XSS\n\n"}
+{"type": "token", "text": "Ceci est un jeu de "}
+{"type": "token", "text": "payloads hostiles pour "}
+{"type": "token", "text": "vérifier le sanitiz"}
+{"type": "token", "text": "ing DOMPurify.\n\n"}
+{"type": "token", "text": "<img src=x on"}
+{"type": "token", "text": "error=\"alert('XSS1')\">\n\n"}
+{"type": "token", "text": "<script>alert"}
+{"type": "token", "text": "('XSS2')</scri"}
+{"type": "token", "text": "pt>\n\n"}
+{"type": "token", "text": "Un lien piégé : "}
+{"type": "token", "text": "[clique ici](java"}
+{"type": "token", "text": "script:alert('XSS3'))\n\n"}
+{"type": "token", "text": "<iframe src=\"https:"}
+{"type": "token", "text": "//example.com\"></iframe>\n\n"}
+{"type": "token", "text": "<div onclick=\"alert"}
+{"type": "token", "text": "('XSS4')\">clique sur "}
+{"type": "token", "text": "ce bloc</div>\n\n"}
+{"type": "token", "text": "<svg onload=\"alert('"}
+{"type": "token", "text": "XSS5')\"></svg>\n\n"}
+{"type": "token", "text": "Si tout est bien "}
+{"type": "token", "text": "nettoyé, aucune alerte "}
+{"type": "token", "text": "ne doit se déclencher."}
+{"type": "done"}

@@ -1,0 +1,24 @@
+{"type": "token", "text": "## Tableau "}
+{"type": "token", "text": "et citation\n\n"}
+{"type": "token", "text": "| Techno "}
+{"type": "token", "text": "| Rôle "}
+{"type": "token", "text": "| Statut |\n"}
+{"type": "token", "text": "| --- "}
+{"type": "token", "text": "| --- "}
+{"type": "token", "text": "| --- |\n"}
+{"type": "token", "text": "| AWS Lambda "}
+{"type": "token", "text": "| Backend agent "}
+{"type": "token", "text": "| Actif |\n"}
+{"type": "token", "text": "| CloudFront "}
+{"type": "token", "text": "| CDN + signature "}
+{"type": "token", "text": "| Actif |\n"}
+{"type": "token", "text": "| S3 "}
+{"type": "token", "text": "| Hébergement statique "}
+{"type": "token", "text": "| Actif |\n\n"}
+{"type": "token", "text": "> Cette citation "}
+{"type": "token", "text": "illustre le rendu "}
+{"type": "token", "text": "des blockquotes GFM.\n\n"}
+{"type": "token", "text": "---\n\n"}
+{"type": "token", "text": "Fin du test "}
+{"type": "token", "text": "tableau et citation."}
+{"type": "done"}
