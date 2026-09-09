@@ -1,0 +1,11 @@
+{
+  "name": "rr-djuikoo-site",
+  "private": true,
+  "dependencies": {
+    "dompurify": "3.4.15",
+    "marked": "18.0.12"
+  },
+  "scripts": {
+    "vendor": "mkdir -p site/js/vendor && cp node_modules/marked/lib/marked.umd.js site/js/vendor/marked.umd.js && cp node_modules/dompurify/dist/purify.min.js site/js/vendor/purify.min.js"
+  }
+}
