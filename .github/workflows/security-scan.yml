@@ -39,6 +39,22 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
+      # Trivy scans package-lock.json, but the browser runs site/js/vendor/.
+      # If a lockfile bump isn't followed by `npm run vendor`, Trivy reports
+      # a fixed version while the vendored bytes are still vulnerable. This
+      # also catches Dependabot PRs, which bump the lockfile via the GitHub
+      # API and never trigger pre-commit, so the resync never happens.
+      - name: Verify vendor files alignment
+        run: |
+          npm ci
+          npm run vendor
+          git diff --exit-code site/js/vendor/
+
       # Gate: fails the job on HIGH/CRITICAL findings only. The SARIF
       # run below still reports every severity (LOW to CRITICAL), so
       # lower-severity findings are never silently ignored.
