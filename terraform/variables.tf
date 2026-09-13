@@ -45,3 +45,8 @@ variable "domain_name" {
   type        = string
   default     = "rr-djuikoo.com"
 }
+
+variable "budget_alert_email" {
+  description = "Address notified when the monthly Bedrock budget is approached or forecast to be exceeded. Deliberately has no default and is absent from terraform.tfvars: this repository is public. Supply it through TF_VAR_budget_alert_email."
+  type        = string
+}

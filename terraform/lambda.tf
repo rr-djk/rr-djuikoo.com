@@ -1,6 +1,6 @@
 resource "aws_cloudwatch_log_group" "chat" {
   name              = "/aws/lambda/rr-djuikoo-chat"
-  retention_in_days = 7
+  retention_in_days = 60
 }
 
 # node_modules ships with the package on purpose: the nodejs22.x runtime does not
