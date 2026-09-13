@@ -9,11 +9,13 @@ const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
   marshallOptions: { removeUndefinedValues: true },
 });
 
+const MODEL_ID = process.env.BEDROCK_MODEL_ID ?? "global.anthropic.claude-haiku-4-5-20251001-v1:0";
+
 // maxTokens is set on purpose: left unset, Bedrock reserves the model maximum
 // against the account quota on every call, which throttles even light traffic.
 // It also caps the cost of a single answer, and the prompt asks for brief ones.
 const model = new BedrockModel({
-  modelId: process.env.BEDROCK_MODEL_ID ?? "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+  modelId: MODEL_ID,
   maxTokens: 1024,
 });
 
@@ -140,6 +142,31 @@ function makeTools(content) {
   ];
 }
 
+// One structured line per answer, read back with Logs Insights to attribute cost
+// to a conversation. Token counts only: the question and the answer are visitor
+// input and stay out of the logs. No dollar amount either - prices change, so the
+// multiplication belongs to the query, not to the code.
+function logUsage(sessionId, result) {
+  const invocation = result?.metrics?.latestAgentInvocation;
+  if (!invocation) return;
+
+  const usage = invocation.usage;
+  console.log(
+    JSON.stringify({
+      event: "chat.usage",
+      sessionId,
+      modelId: MODEL_ID,
+      inputTokens: usage.inputTokens,
+      outputTokens: usage.outputTokens,
+      totalTokens: usage.totalTokens,
+      cacheReadInputTokens: usage.cacheReadInputTokens,
+      cacheWriteInputTokens: usage.cacheWriteInputTokens,
+      cycles: invocation.cycles.length,
+      stopReason: result.stopReason,
+    })
+  );
+}
+
 export async function* answerWith(message, sessionId) {
   let content;
   try {
@@ -159,17 +186,30 @@ export async function* answerWith(message, sessionId) {
     printer: false,
   });
 
-  for await (const ev of agent.stream(message)) {
+  // stream() returns the AgentResult as the generator's return value, which a
+  // `for await` loop discards. Driving the iterator by hand is the only way to
+  // reach the token counts it carries without giving up streaming.
+  const stream = agent.stream(message);
+  let result;
+
+  for (;;) {
+    const { value, done } = await stream.next();
+    if (done) {
+      result = value;
+      break;
+    }
+
     if (
-      ev.type === "modelStreamUpdateEvent" &&
-      ev.event.type === "modelContentBlockDeltaEvent" &&
-      ev.event.delta?.type === "textDelta"
+      value.type === "modelStreamUpdateEvent" &&
+      value.event.type === "modelContentBlockDeltaEvent" &&
+      value.event.delta?.type === "textDelta"
     ) {
-      yield { type: "token", text: ev.event.delta.text };
-    } else if (ev.type === "beforeToolCallEvent") {
-      yield { type: "tool", name: ev.toolUse?.name ?? "tool" };
+      yield { type: "token", text: value.event.delta.text };
+    } else if (value.type === "beforeToolCallEvent") {
+      yield { type: "tool", name: value.toolUse?.name ?? "tool" };
     }
   }
 
   await saveHistory(sessionId, agent.messages);
+  logUsage(sessionId, result);
 }
