@@ -2,7 +2,7 @@
 // Deliberately stateless: Every message is judged on its own.
 
 import { Agent, BedrockModel } from "@strands-agents/sdk";
-import { GATEKEEPER_PROMPT } from "./prompts.mjs";
+import { gatekeeperPrompt } from "./prompts.mjs";
 import { logUsage } from "../usage.mjs";
 
 const AGENT_NAME = "gatekeeper";
@@ -35,12 +35,13 @@ const FALLBACK_REPLY =
  * Screens a visitor message before it reaches the orchestrator.
  * @param {string} message - The visitor's message, verbatim.
  * @param {string} sessionId - Conversation the message belongs to, for the usage log.
+ * @param {object} content - The portfolio content, so the screener knows what the site is about.
  * @returns {Promise<string|null>} The refusal to show, or null to let the message through.
  */
-export async function refusalFor(message, sessionId) {
+export async function refusalFor(message, sessionId, content) {
   const agent = new Agent({
     model,
-    systemPrompt: GATEKEEPER_PROMPT,
+    systemPrompt: gatekeeperPrompt(content),
     printer: false,
   });
 

@@ -230,22 +230,26 @@ export function makeTools(content, sessionId) {
 }
 
 export async function* answerWith(message, sessionId) {
-    // Screened first, before the content load and before the history read. A
-    // refused message is never written to the session either: keeping the attempt
-    // would leave it in the context of every later turn, which is exactly how the
-    // orchestrator was talked out of its instructions.
-    const refusal = await refusalFor(message, sessionId);
-    if (refusal) {
-        yield { type: "token", text: refusal };
-        return;
-    }
-
+    // The content is loaded first because the screener needs it: without the
+    // project names it cannot tell a question about MyAm from one about anything
+    // else it has never heard of, and refuses both. It is cached for five minutes
+    // and falls back to a local copy, so the refusal path stays cheap.
     let content;
     try {
         content = await loadContent();
     } catch (err) {
         console.error("unable to load portfolio content", err);
         yield { type: "error", text: "[Namespace] Portfolio content is unavailable right now." };
+        return;
+    }
+
+    // Screened before the history read. A refused message is never written to the
+    // session either: keeping the attempt would leave it in the context of every
+    // later turn, which is exactly how the orchestrator was talked out of its
+    // instructions.
+    const refusal = await refusalFor(message, sessionId, content);
+    if (refusal) {
+        yield { type: "token", text: refusal };
         return;
     }
 
