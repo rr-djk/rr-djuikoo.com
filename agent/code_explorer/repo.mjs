@@ -143,9 +143,12 @@ export async function fetchRepo({ owner, repo }) {
 
   // Extracted aside then moved into place: an interrupted run must not leave a
   // half-unpacked tree behind that the check above would take for a valid cache.
-  // The staging name is unique per invocation because concurrent executions share
-  // this /tmp: a fixed name would let a second extraction delete or interleave
-  // with the first, and the rename would then freeze the mixed tree as the cache.
+  //
+  // The staging name is unique per call rather than fixed. In Lambda a fixed one
+  // would already be safe, since an execution environment serves one invocation
+  // at a time and each has its own /tmp. The unique name means the module does
+  // not lean on that guarantee, and it matters outside Lambda - nothing
+  // serialises two local runs of this code against the same directory.
   const staging = `${root}.partial-${randomUUID()}`;
   await mkdir(staging, { recursive: true });
 
