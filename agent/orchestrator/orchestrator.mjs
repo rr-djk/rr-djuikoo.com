@@ -3,12 +3,15 @@ import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 import { z } from "zod";
 import { loadContent } from "./content.mjs";
-import { SYSTEM_PROMPT } from "./prompts.mjs";
+import { ORCHESTRATOR_PROMPT } from "./prompts.mjs";
+import { logUsage } from "../usage.mjs";
+import { isRelevant, OFF_TOPIC_REPLY } from "../gatekeeper/gatekeeper.mjs";
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
   marshallOptions: { removeUndefinedValues: true },
 });
 
+const AGENT_NAME = "orchestrator";
 const MODEL_ID = process.env.BEDROCK_MODEL_ID ?? "global.anthropic.claude-haiku-4-5-20251001-v1:0";
 
 // maxTokens is set on purpose: left unset, Bedrock reserves the model maximum
@@ -142,32 +145,16 @@ function makeTools(content) {
   ];
 }
 
-// One structured line per answer, read back with Logs Insights to attribute cost
-// to a conversation. Token counts only: the question and the answer are visitor
-// input and stay out of the logs. No dollar amount either - prices change, so the
-// multiplication belongs to the query, not to the code.
-function logUsage(sessionId, result) {
-  const invocation = result?.metrics?.latestAgentInvocation;
-  if (!invocation) return;
-
-  const usage = invocation.usage;
-  console.log(
-    JSON.stringify({
-      event: "chat.usage",
-      sessionId,
-      modelId: MODEL_ID,
-      inputTokens: usage.inputTokens,
-      outputTokens: usage.outputTokens,
-      totalTokens: usage.totalTokens,
-      cacheReadInputTokens: usage.cacheReadInputTokens,
-      cacheWriteInputTokens: usage.cacheWriteInputTokens,
-      cycles: invocation.cycles.length,
-      stopReason: result.stopReason,
-    })
-  );
-}
-
 export async function* answerWith(message, sessionId) {
+  // Screened first, before the content load and before the history read. A
+  // refused message is never written to the session either: keeping the attempt
+  // would leave it in the context of every later turn, which is exactly how the
+  // orchestrator was talked out of its instructions.
+  if (!(await isRelevant(message, sessionId))) {
+    yield { type: "token", text: OFF_TOPIC_REPLY };
+    return;
+  }
+
   let content;
   try {
     content = await loadContent();
@@ -180,7 +167,7 @@ export async function* answerWith(message, sessionId) {
   const history = await loadHistory(sessionId);
   const agent = new Agent({
     model,
-    systemPrompt: SYSTEM_PROMPT,
+    systemPrompt: ORCHESTRATOR_PROMPT,
     messages: history,
     tools: makeTools(content),
     printer: false,
@@ -211,5 +198,5 @@ export async function* answerWith(message, sessionId) {
   }
 
   await saveHistory(sessionId, agent.messages);
-  logUsage(sessionId, result);
+  logUsage({ agent: AGENT_NAME, sessionId, modelId: MODEL_ID, result });
 }

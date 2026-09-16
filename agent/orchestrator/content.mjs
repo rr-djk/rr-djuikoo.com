@@ -23,7 +23,7 @@ async function fetchContent() {
   // Local development: with no bucket configured, read the build output from
   // disk. In Lambda the variable is always set, so this path is never taken.
   if (!bucket) {
-    const path = fileURLToPath(new URL("../site/content.json", import.meta.url));
+    const path = fileURLToPath(new URL("../../site/content.json", import.meta.url));
     return JSON.parse(await readFile(path, "utf8"));
   }
 
