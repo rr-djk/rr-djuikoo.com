@@ -60,11 +60,14 @@ resource "aws_cloudfront_distribution" "main" {
     origin_id                = "chat"
     origin_access_control_id = aws_cloudfront_origin_access_control.chat.id
 
+    # Kept equal to the Lambda timeout on purpose: a shorter value here would
+    # drop the viewer while the function keeps running, and billing, in the void.
     custom_origin_config {
       http_port              = 80
       https_port             = 443
       origin_protocol_policy = "https-only"
       origin_ssl_protocols   = ["TLSv1.2"]
+      origin_read_timeout    = 90
     }
   }
 

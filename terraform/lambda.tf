@@ -41,7 +41,12 @@ resource "aws_lambda_function" "chat" {
   runtime       = "nodejs22.x"
   architectures = ["arm64"]
   memory_size   = 512
-  timeout       = 30
+
+  # Raised from 30s for the code explorer: downloading a repository and reading
+  # it through several model round trips does not fit in 30s. This is headroom,
+  # not a target - the explorer stops itself after 45s of exploration, and the
+  # matching origin_read_timeout in cloudfront.tf keeps the two ends aligned.
+  timeout = 90
 
   reserved_concurrent_executions = 10
 
