@@ -22,3 +22,8 @@ override.tf.json
 
 # Agent build artefact
 agent.zip
+
+# Bedrock eval runs: one timestamped file per `make eval`, full of model output
+# that changes every run. Keep one deliberately with `git add -f` to pin a
+# baseline worth comparing against.
+tests/results/

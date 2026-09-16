@@ -35,7 +35,7 @@ const MAX_FILE_BYTES = 512 * 1024;
 // three projects are largely Terraform, so .tf and .tfvars belong in this set.
 // .env is deliberately absent - only .env.example below is read, so a committed
 // secret is never pulled into the explorer's reach even from a public repository.
-const CODE_EXTENSIONS = new Set([
+export const CODE_EXTENSIONS = new Set([
   ".bash", ".c", ".cfg", ".cjs", ".conf", ".cpp", ".cs", ".css", ".dart",
   ".go", ".gradle", ".h", ".hcl", ".hpp", ".html", ".ini", ".java", ".js", ".json",
   ".jsx", ".kt", ".kts", ".md", ".mjs", ".php", ".properties", ".py", ".rb", ".rs",

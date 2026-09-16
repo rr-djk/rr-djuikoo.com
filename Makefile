@@ -4,8 +4,10 @@ IP := $(shell hostname -I | awk '{print $$1}')
 # Use a dedicated port for dev testing to avoid conflicts with 'serve'
 DEV_PORT := 8001
 SITE_DIR := site
+# Region the stack is deployed in; override to point the eval elsewhere.
+AWS_REGION ?= us-east-1
 
-.PHONY: build serve dev mock agent-deps site-deps vendor plan apply
+.PHONY: build serve dev mock check eval agent-deps site-deps vendor plan apply
 
 ## --- Build & Local Development ---
 build:
@@ -58,6 +60,25 @@ agent-deps:
 	@[ "$$(cat agent/node_modules/.deps-stamp 2>/dev/null)" = "$$(sha256sum agent/package-lock.json | cut -d' ' -f1)" ] \
 		|| rm -f agent/node_modules/.deps-stamp
 	@$(MAKE) --no-print-directory agent/node_modules/.deps-stamp
+
+## --- Tests ---
+# Split in two because one costs money. 'check' is meant to be run after every
+# change; 'eval' calls Bedrock for each question and is run deliberately.
+# Both need agent/node_modules: the scripts import the Strands SDK and tar.
+
+# No AWS call and no credentials. Reaches GitHub to fetch the repositories,
+# so it is not offline.
+# --test-concurrency=1 is required, not a preference: node --test runs one
+# process per file, and repo.test.mjs wipes the /tmp tree that tools.test.mjs
+# reads. The whole suite takes about three seconds, so parallelism would buy
+# nothing and cost an intermittent race.
+check: agent-deps
+	node --test --test-concurrency=1 --test-reporter=spec tests/
+
+# Consumes Bedrock tokens and writes eval- prefixed rows into the sessions
+# table, which expire with its 24h TTL.
+eval: agent-deps
+	AWS_REGION=$(AWS_REGION) node tests/agent-eval.mjs
 
 ## --- Infrastructure & Deployment ---
 plan: agent-deps
