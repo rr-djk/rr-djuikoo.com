@@ -26,7 +26,6 @@ const REPO_URL = /^https:\/\/github\.com\/([A-Za-z0-9._-]+)\/([A-Za-z0-9._-]+?)(
 const BRANCHES = ["main", "master"];
 
 const DOWNLOAD_TIMEOUT_MS = 20_000;
-const MAX_ARCHIVE_BYTES = 32 * 1024 * 1024;
 const MAX_FILE_BYTES = 512 * 1024;
 
 // Source, configuration and documentation. Everything else is skipped: the
@@ -99,14 +98,9 @@ async function download(owner, repo) {
       throw new RepoError("The repository could not be downloaded right now.");
     }
 
-    if (response.ok) {
-      const declared = Number(response.headers.get("content-length"));
-      if (declared > MAX_ARCHIVE_BYTES) {
-        response.body?.cancel();
-        throw new RepoError("That repository is too large to be explored.");
-      }
-      return response;
-    }
+    // No size check on the archive: GitHub builds it on the fly and sends no
+    // content-length, so a cap on the declared size never fired.
+    if (response.ok) return response;
 
     response.body?.cancel();
     lastStatus = response.status;
