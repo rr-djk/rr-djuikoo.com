@@ -134,10 +134,11 @@ export function makeExplorerTools(root) {
   const searchCode = tool({
     name: "search_code",
     description:
-      "Search the repository for a regular expression and return the matching lines with their file and line number. " +
+      "Search the repository for plain text, ignoring case, and return the matching lines with their file and line number. " +
+      "Separate alternatives with '|' to match any of them. No regular expression syntax: '.', '*' or '\\s' are searched literally. " +
       "Use this before read_file to find where something lives.",
     inputSchema: z.object({
-      pattern: z.string().describe("JavaScript regular expression, e.g. 'jwt|token'"),
+      pattern: z.string().describe("Plain text, or alternatives separated by '|', e.g. 'jwt|token'"),
     }),
     callback: async ({ pattern }) => {
       if (exhausted()) return BUDGET_SPENT;
@@ -145,12 +146,14 @@ export function makeExplorerTools(root) {
 
       if (pattern.length > MAX_PATTERN_LENGTH) return "That search pattern is too long.";
 
-      let re;
-      try {
-        re = new RegExp(pattern, "i");
-      } catch {
-        return `'${pattern}' is not a valid regular expression.`;
-      }
+      // Literal matching, never a RegExp built from the model's pattern. A
+      // backtracking pattern such as (a+)+$ blocks inside a single test() call,
+      // where no deadline check can run, and would hold the Lambda to its timeout.
+      const terms = pattern
+        .split("|")
+        .map((term) => term.toLowerCase())
+        .filter(Boolean);
+      if (!terms.length) return "That search pattern is empty.";
 
       const matches = [];
       for await (const file of walk(root)) {
@@ -164,7 +167,11 @@ export function makeExplorerTools(root) {
         const name = relative(root, file);
         const lines = text.split("\n");
         for (let i = 0; i < lines.length; i += 1) {
-          if (!re.test(lines[i])) continue;
+          // Also checked per line: a single file can be long enough to matter.
+          if (Date.now() > budget.until) break;
+
+          const line = lines[i].toLowerCase();
+          if (!terms.some((term) => line.includes(term))) continue;
           matches.push(`${name}:${i + 1}: ${lines[i].trim().slice(0, 200)}`);
           if (matches.length >= MAX_SEARCH_MATCHES) break;
         }

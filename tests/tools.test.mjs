@@ -3,9 +3,10 @@
 //
 // Reads the local disk only. No Bedrock, no cost.
 
-import { readFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -51,9 +52,10 @@ describe("fonctionnement nominal", () => {
     assert.match(missing, /^No file at/);
   });
 
-  it("search_code le dit quand la regex est invalide", async () => {
-    const bad = await tools().search_code.invoke({ pattern: "auth(" });
-    assert.match(bad, /not a valid/);
+  it("search_code trouve chacune des alternatives séparées par |", async () => {
+    const found = await tools().search_code.invoke({ pattern: "reserved_concurrent|escapeHtml" });
+    assert.match(found, /terraform\//);
+    assert.match(found, /scripts\/build-site\.mjs/);
   });
 
   it("search_code le dit quand rien ne correspond", async () => {
@@ -81,6 +83,25 @@ describe("confinement des chemins", () => {
   it("list_files refuse de remonter", async () => {
     const up = await tools().list_files.invoke({ path: ".." });
     assert.match(up, /outside the repository/);
+  });
+});
+
+describe("motif à retour arrière catastrophique", () => {
+  it("search_code répond en moins d'une seconde sur (a+)+$", async (t) => {
+    // Hors de /tmp/repos, que repo.test.mjs efface. Une ligne de 5 000 « a »
+    // suivie d'un caractère qui fait échouer $ : en expression régulière, ce
+    // motif ne rendrait pas la main avant le timeout de la Lambda.
+    const dir = await mkdtemp(join(tmpdir(), "redos-"));
+    t.after(() => rm(dir, { recursive: true, force: true }));
+    await writeFile(join(dir, "long.txt"), `${"a".repeat(5000)}!\n`);
+
+    const started = Date.now();
+    const out = await makeExplorerTools(dir).tools.find((x) => x.name === "search_code").invoke({ pattern: "(a+)+$" });
+    const elapsed = Date.now() - started;
+    t.diagnostic(`${elapsed} ms`);
+
+    assert.match(out, /^No match/);
+    assert.ok(elapsed < 1000, `search_code a pris ${elapsed} ms`);
   });
 });
 
