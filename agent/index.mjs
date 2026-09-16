@@ -23,14 +23,31 @@ const RATE_LIMIT_WINDOW_SECONDS = 10 * 60;
 // and the gatekeeper and the orchestrator would each bill the message as input.
 const MAX_MESSAGE_CHARS = 2000;
 
+// A UUID v4, the shape crypto.randomUUID() gives the browser. Anything else is a
+// hand-built request: a guessable id would let one caller replay another's history.
+const SESSION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+// The first X-Forwarded-For entry is whatever the client wrote: CloudFront keeps
+// it and appends the real address at the end. Reading it let one caller dodge the
+// rate limit with a fresh fake IP per request, or exhaust someone else's quota.
 function getClientIp(event) {
-  const forwarded = event.headers?.["x-forwarded-for"] ?? event.headers?.["X-Forwarded-For"];
-  if (forwarded) return forwarded.split(",")[0].trim();
-  return (
-    event.headers?.["cloudfront-viewer-address"]?.split(":")[0] ??
-    event.requestContext?.http?.sourceIp ??
-    "unknown"
-  );
+  const headers = event.headers ?? {};
+
+  // Written by CloudFront itself, as "ip:port". Cut at the last colon: an IPv6
+  // address holds several, and cutting at the first would merge every IPv6
+  // visitor of a prefix into a single counter.
+  const viewerAddress = headers["cloudfront-viewer-address"];
+  if (viewerAddress) {
+    const lastColon = viewerAddress.lastIndexOf(":");
+    return lastColon === -1 ? viewerAddress : viewerAddress.substring(0, lastColon);
+  }
+
+  const forwarded = headers["x-forwarded-for"];
+  if (forwarded) return forwarded.split(",").pop().trim();
+
+  // Behind CloudFront this is the edge server's address, not the visitor's: a
+  // shared counter, stricter rather than bypassable.
+  return event.requestContext?.http?.sourceIp ?? "127.0.0.1";
 }
 
 async function checkRateLimit(ip) {
@@ -39,10 +56,15 @@ async function checkRateLimit(ip) {
   const now = Math.floor(Date.now() / 1000);
   const windowEnd = now + RATE_LIMIT_WINDOW_SECONDS;
 
+  // The window number is part of the key, so each 10-minute slice starts a fresh
+  // counter. Relying on the TTL to reset may not hold: DynamoDB deletes expired
+  // items within days, not minutes.
+  const windowNumber = Math.floor(now / RATE_LIMIT_WINDOW_SECONDS);
+
   const res = await ddb.send(
     new UpdateCommand({
       TableName: table,
-      Key: { ip },
+      Key: { ip: `${ip}#${windowNumber}` },
       UpdateExpression:
         "SET #count = if_not_exists(#count, :zero) + :inc, expiresAt = if_not_exists(expiresAt, :windowEnd)",
       ExpressionAttributeNames: { "#count": "count" },
@@ -79,7 +101,7 @@ export const handler = awslambda.streamifyResponse(
 
       const body = JSON.parse(event.body ?? "{}");
       const message = body.message ?? "Hello!";
-      const sessionId = body.sessionId ?? "no-session";
+      const sessionId = body.sessionId;
 
       // The type check is what makes the length check hold: an object has no
       // length and an array's is its item count, so either would slip through.
@@ -100,6 +122,12 @@ export const handler = awslambda.streamifyResponse(
         responseStream.end();
         return;
       }
+      if (typeof sessionId !== "string" || !SESSION_ID.test(sessionId)) {
+        send({ type: "error", text: "Invalid session.", code: "INVALID_SESSION" });
+        send({ type: "done" });
+        responseStream.end();
+        return;
+      }
 
       const heartbeat = setInterval(() => send({ type: "ping" }), HEARTBEAT_MS);
       try {
@@ -111,7 +139,10 @@ export const handler = awslambda.streamifyResponse(
       }
       send({ type: "done" });
     } catch (err) {
-      send({ type: "error", text: `${err.name}: ${err.message}` });
+      // AWS SDK errors carry role ARNs, the account id and table names. The detail
+      // goes to CloudWatch only; the visitor gets nothing an attacker could map.
+      console.error("chat request failed", err);
+      send({ type: "error", text: "An internal error occurred.", code: "INTERNAL_ERROR" });
     }
 
     responseStream.end();
