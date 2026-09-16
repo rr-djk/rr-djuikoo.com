@@ -18,6 +18,11 @@ const HEARTBEAT_MS = 10_000;
 const RATE_LIMIT_MAX = 20;
 const RATE_LIMIT_WINDOW_SECONDS = 10 * 60;
 
+// Must stay equal to the chat input's maxlength in src/index.template.html. That
+// attribute only binds the page: a request sent straight to /api/chat skips it,
+// and the gatekeeper and the orchestrator would each bill the message as input.
+const MAX_MESSAGE_CHARS = 2000;
+
 function getClientIp(event) {
   const forwarded = event.headers?.["x-forwarded-for"] ?? event.headers?.["X-Forwarded-For"];
   if (forwarded) return forwarded.split(",")[0].trim();
@@ -75,6 +80,26 @@ export const handler = awslambda.streamifyResponse(
       const body = JSON.parse(event.body ?? "{}");
       const message = body.message ?? "Hello!";
       const sessionId = body.sessionId ?? "no-session";
+
+      // The type check is what makes the length check hold: an object has no
+      // length and an array's is its item count, so either would slip through.
+      // No trim, so the count matches what maxlength lets the browser send.
+      if (typeof message !== "string") {
+        send({ type: "error", text: "Message must be a string.", code: "INVALID_MESSAGE" });
+        send({ type: "done" });
+        responseStream.end();
+        return;
+      }
+      if (message.length > MAX_MESSAGE_CHARS) {
+        send({
+          type: "error",
+          text: `Message too long: ${MAX_MESSAGE_CHARS} characters maximum.`,
+          code: "MESSAGE_TOO_LONG",
+        });
+        send({ type: "done" });
+        responseStream.end();
+        return;
+      }
 
       const heartbeat = setInterval(() => send({ type: "ping" }), HEARTBEAT_MS);
       try {
