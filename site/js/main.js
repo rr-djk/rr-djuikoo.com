@@ -137,10 +137,14 @@ async function readReply(targetEl, response) {
     if (!frame) frame = requestAnimationFrame(flush);
   };
 
-  targetEl.classList.add('is-streaming');
+  // `is-waiting` shows three dots until the first token lands. A tool call on the
+  // agent's side can keep the bubble silent for several seconds, and a bare
+  // blinking caret reads as a frozen page rather than as work in progress.
+  targetEl.classList.add('is-streaming', 'is-waiting');
   try {
     for await (const message of parseNDJSONStream(response)) {
       if (message.type === "token") {
+        targetEl.classList.remove('is-waiting');
         markdown += message.text;
         schedule();
       } else if (message.type === "error") {
@@ -160,7 +164,7 @@ async function readReply(targetEl, response) {
     // writes into this same element.
     if (frame) cancelAnimationFrame(frame);
     flush();
-    targetEl.classList.remove('is-streaming');
+    targetEl.classList.remove('is-streaming', 'is-waiting');
   }
 }
 
