@@ -30,6 +30,19 @@ Le workflow `.github/workflows/security-scan.yml` s'exécute sur chaque pull req
 - **Sanitization XSS dans le Chat** : Tout le contenu généré par l'assistant virtuel au format Markdown est passé au crible de `DOMPurify` avant insertion dans le DOM. Les balises à risque (ex: `<iframe>`, `<script>`, `<img>`) sont éliminées, et les liens externes sont contraints avec `rel="noopener noreferrer"`.
 - **Garantie d'intégrité Vendor** : Les dépendances navigateur (`marked`, `DOMPurify`) sont déclarées dans `package.json` et synchronisées dans `site/js/vendor/` via `make vendor`. Trivy n'analysant que les manifestes et jamais les fichiers `.js` réellement servis, deux garde-fous complémentaires garantissent que les octets exécutés par le navigateur correspondent au lockfile audité : le hook pre-commit `vendor-deps` rejette les commits locaux qui dérivent, et une étape du workflow `security-scan.yml` rejette les pull requests et les push sur `main`, y compris ceux créés par API sans passer par pre-commit.
 
+### Sécurité du Runtime Multi-Agent et du Code Explorer
+
+- **Allowlist stricte de dépôts** : L'agent _Code Explorer_ résout l'URL du dépôt GitHub à télécharger exclusivement depuis le fichier `content.json` hébergé sur S3 (`resolveRepo`). Aucune instruction utilisateur ni aucun prompt du modèle ne peut forcer le système à télécharger un dépôt externe ou privé non répertorié.
+- **Isolation et Sanitization des archives (`repo.mjs`)** :
+  - **Exclusion des liens symboliques** : L'extraction `tar` rejette tous les symlinks (`entry.type === "File"` uniquement), neutralisant ainsi tout risque de traversée de répertoire par saut de lien symbolique.
+  - **Filtrage des extensions et secrets** : Seuls les fichiers de code textuels (`CODE_EXTENSIONS`) et les fichiers de configuration autorisés (`CODE_FILENAMES`) sont extraits. Les binaires, exécutables et fichiers de secrets (`.env`) sont strictement ignorés (`.env.example` autorisé).
+  - **Limites de taille et staging atomique** : Archives plafonnées à 32 Mo, fichiers individuels plafonnés à 512 Ko. Extraction sous un répertoire de staging temporaire unique (`.partial-UUID`) sous `/tmp` pour éviter qu'une interruption ne laisse un dossier incomplet pris pour un cache valide, et pour isoler les exécutions locales simultanées.
+- **Barrière de chemin sandbox (`inside(path)`)** : L'ensemble des outils d'exploration (`list_files`, `read_file`, `search_code`) valident la résolution lexicale du chemin demandé pour garantir qu'aucune lecture ne sorte du répertoire du dépôt sous `/tmp`.
+- **Budgets et plafonds d'exécution** : L'exploration de code est restreinte par trois budgets simultanés (12 appels d'outils max, 120 Ko de texte lu max, 45 s de délai d'expiration max) pour empêcher tout épuisement de ressource ou de mémoire de la Lambda.
+- **Filtrage de périmètre et Confidentialité des Journaux** :
+  - Le _Gatekeeper_ évalue chaque message de façon isolée (sans historique) pour refuser les questions hors-sujet avant tout chargement de session, fermant ainsi la contournement par étapes multi-tours. Conçu selon un principe _fail-open_, en cas d'erreur du screener, il laisse passer le message vers l'Orchestrateur.
+  - Les métriques de consommation émettent des journaux d'usage (`chat.usage`) contenant uniquement des compteurs de tokens, les noms d'agents et le `sessionId`. **Aucun texte de conversation (saisie utilisateur ou réponse agent) n'est consigné dans les logs CloudWatch**. La rétention des logs est fixée à 60 jours.
+
 ## Exceptions de sécurité
 
 Les exceptions d'analyse Checkov pour l'infrastructure Terraform (par exemple le mode mono-région ou le ciblage des journaux) sont documentées et justifiées dans le fichier `.checkov.yml` à la racine du dépôt.

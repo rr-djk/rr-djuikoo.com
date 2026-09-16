@@ -24,6 +24,8 @@ Ce workflow s'exécute avec des permissions réinitialisées (`permissions: {}`)
 - **Gitleaks (`secrets`)** : analyse l'historique git pour détecter d'éventuels jetons, clés ou mots de passe.
 - **Checkov (`iac`)** : analyse les fichiers Terraform du dossier `terraform/`. Se déclenche uniquement si des fichiers d'infrastructure ont été modifiés (`dorny/paths-filter`).
 
+> **Note sur les bancs d'essai** : La suite de tests unitaires et d'évaluation de l'agent (`tests/`, exécutée via `make check` et `make eval`) est conçue pour la validation locale sur le poste de travail et n'est pas exécutée automatiquement dans le workflow de CI GitHub Actions actuels.
+
 ## Workflow 2 : Deploy Site (`deploy-site.yml`)
 
 Ce workflow s'exécute uniquement si `Security Scan` a réussi sur la branche `main`.
@@ -48,12 +50,15 @@ Ce workflow s'exécute uniquement si `Security Scan` a réussi sur la branche `m
 
 ## Gestion de l'infrastructure
 
-L'infrastructure AWS (fichiers `.tf` sous `terraform/`) est appliquée exclusivement depuis un poste de travail autorisé :
+L'infrastructure AWS (fichiers `.tf` sous `terraform/`) est appliquée exclusivement depuis un poste de travail autorisé.
+
+La variable `TF_VAR_budget_alert_email` est requise pour configurer l'adresse de réception des alertes de budget Bedrock sans exposer d'adresse email dans le dépôt public. Elle doit être définie dans un fichier `.env` local (basé sur `.env.example`) :
 
 ```bash
-make agent-deps   # prépare les dépendances Node.js du paquet Lambda
-make plan         # génère le plan Terraform (tfplan)
-make apply        # applique le plan validé
+cp .env.example .env
+# Modifier .env avec votre adresse d'alerte budgétaire
+source .env && make plan   # installe agent/node_modules, valide l'empreinte et génère le plan Terraform (tfplan)
+source .env && make apply  # applique le plan validé
 ```
 
-Le processus de déploiement garantit que le paquet Lambda embarque l'ensemble de ses dépendances d'exécution (`node_modules`) avant toute mise à jour du code.
+Le processus de déploiement garantit que le paquet Lambda (`agent.zip`) embarque l'ensemble de ses dépendances d'exécution de l'agent (`node_modules` incluant `@strands-agents/sdk`, `zod` et `tar`) avant toute mise à jour du code. Le fichier `agent/node_modules/.deps-stamp` contient l'empreinte SHA-256 du fichier `agent/package-lock.json` ; une précondition dans `lambda.tf` interrompt la génération du plan si les dépendances ne sont pas installées ou ne sont pas à jour.
