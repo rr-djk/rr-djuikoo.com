@@ -15,18 +15,21 @@ Le code d'infrastructure est situé dans le dossier `terraform/` :
 - `dynamodb.tf` : tables DynamoDB pour les sessions et le contrôle du débit.
 - `iam.tf` : rôles et politiques IAM pour la Lambda et les accès Bedrock.
 - `acm.tf` et `route53.tf` : gestion du certificat TLS et des enregistrements DNS.
+- `monitoring.tf` : tableau de bord CloudWatch et alerte budgétaire mensuelle Bedrock.
 
 ## Spécificités d'implémentation et points d'attention
 
 ### 1. Gestion des dépendances de la Lambda (`agent.zip`)
 
-Le runtime AWS Lambda `nodejs22.x` ne contient pas les paquets `@strands-agents/sdk` ou `zod`. Les dépendances sous `node_modules` doivent obligatoirement être incluses dans le fichier `agent.zip`.
+Le runtime AWS Lambda `nodejs22.x` ne contient pas les paquets `@strands-agents/sdk`, `zod` ou `tar`. Les dépendances sous `node_modules` doivent obligatoirement être incluses dans le fichier `agent.zip`.
 
 Afin de prévenir tout déploiement d'une archive incomplète, Terraform intègre une `precondition` dans `lambda.tf`. Celle-ci compare l'empreinte du fichier `agent/node_modules/.deps-stamp` avec le hachage SHA-256 de `agent/package-lock.json`. Le plan Terraform échoue automatiquement si les dépendances ne sont pas installées ou ne sont pas à jour.
 
-### 2. Maîtrise des coûts et concurrence Lambda
+### 2. Maîtrise des coûts, délais et concurrence Lambda
 
-Pour éviter une surconsommation imprévue des API Amazon Bedrock, la fonction Lambda applique `reserved_concurrent_executions = 10`. La mémoire est fixée à `512 MB` et le délai d'expiration à 30 secondes.
+Pour éviter une surconsommation imprévue des API Amazon Bedrock, la fonction Lambda applique `reserved_concurrent_executions = 10`. La mémoire est fixée à `512 MB`.
+
+Le délai d'expiration (`timeout`) de la Lambda est fixé à **90 secondes** afin d'offrir la marge nécessaire aux opérations du sous-agent _Code Explorer_ (qui applique un délai d'exploration interne de 45 secondes) et aux allers-retours du modèle. La valeur `origin_read_timeout` dans `cloudfront.tf` est alignée à 90 secondes.
 
 ### 3. Exigence de l'en-tête `X-Amz-Content-Sha256`
 
@@ -61,3 +64,17 @@ L'accès au modèle Anthropic Claude Haiku 4.5 (`global.anthropic.claude-haiku-4
 - Autorisation sur l'ARN du profil d'inférence global incluant l'identifiant du compte.
 - Autorisation sur le modèle de base régional.
 - Autorisation sur le modèle de base global.
+
+### 8. Supervision et Alerte Budgétaire Bedrock
+
+Le fichier `monitoring.tf` configure deux mécanismes de contrôle des coûts :
+
+1. **Tableau de bord CloudWatch (`rr-djuikoo-bedrock-cost`)** :
+   - Graphiques d'utilisation des tokens d'entrée et de sortie Bedrock.
+   - Suivi des invocations, throttles et erreurs client/serveur.
+   - Requête Logs Insights interrogeant les événements `chat.usage` émis par `agent/usage.mjs` pour ventiler la consommation de tokens et de tours de boucle par session et par agent (`gatekeeper`, `orchestrator`, `code_explorer`).
+2. **Budget mensuel AWS Budgets (`rr-djuikoo-bedrock-monthly`)** :
+   - Plafond de coût configuré à 20 USD par mois sur le service Amazon Bedrock.
+   - Notifications envoyées par email dès 80 % du budget réel atteint et dès 100 % du budget prévisionnel atteint.
+   - L'adresse email de destination est transmise via la variable `var.budget_alert_email` (`TF_VAR_budget_alert_email` dans `.env`).
+   - Ce budget est un mécanisme d'alerte purement passif sans coupure automatique ; la protection en temps réel est assurée par `maxTokens` dans le code des agents, la limite de concurrence Lambda et le rate limiting DynamoDB.

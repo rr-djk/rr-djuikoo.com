@@ -566,7 +566,7 @@ input:focus-visible {
 /* Blinking caret shown at the end of a bubble while it streams. A CSS
    pseudo-element, not a character appended to the Markdown string: injecting
    one there would break whatever syntax is mid-parse. */
-.chat-message.is-streaming::after {
+.chat-message.is-streaming:not(.is-waiting)::after {
   content: '';
   display: inline-block;
   width: 2px;
@@ -577,6 +577,19 @@ input:focus-visible {
   animation: chat-caret 1s step-end infinite;
 }
 @keyframes chat-caret { 50% { opacity: 0; } }
+
+/* Three dots while the agent has sent nothing yet. The width is animated rather
+   than `content`, which browsers do not animate reliably; `overflow: hidden`
+   reveals the dots one at a time. */
+.chat-message.is-waiting::after {
+  content: '...';
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  width: 0;
+  animation: chat-dots 1.2s steps(4, jump-none) infinite;
+}
+@keyframes chat-dots { to { width: 3ch; } }
 
 .chat-input-bar {
   padding: 16px 24px 24px;

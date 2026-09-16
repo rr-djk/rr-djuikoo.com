@@ -28,9 +28,35 @@ const ALLOWED_TAGS = [
 ];
 const ALLOWED_ATTR = ['href'];
 
+// Hosts the site's own content links to (site/content.json). The reply can be
+// steered by text the owner does not control - a file in a public repository the
+// code explorer read - so a link to anywhere else would reach the visitor as a
+// clickable link served from this domain. Update when the profile adds a host.
+const ALLOWED_LINK_HOSTS = new Set([
+  'github.com', 'www.linkedin.com', 'learn.microsoft.com', 'rr-djuikoo.com',
+]);
+
+/**
+ * Tells whether a link in the agent's reply may stay clickable.
+ * @param {string|null} href - The sanitized href attribute.
+ * @returns {boolean} True for mailto: or an allowed host.
+ */
+function isAllowedLink(href) {
+  if (!href) return false;
+  if (href.startsWith('mailto:')) return true;
+  try {
+    return ALLOWED_LINK_HOSTS.has(new URL(href, location.origin).hostname);
+  } catch {
+    return false;
+  }
+}
+
 // Links in the agent's reply should not navigate the chat away from the page.
 DOMPurify.addHook('afterSanitizeAttributes', (node) => {
   if (node.tagName === 'A') {
+    // The text stays, only the link goes: the visitor still reads what the
+    // agent wrote, but nothing off the allowlist can be clicked.
+    if (!isAllowedLink(node.getAttribute('href'))) node.removeAttribute('href');
     node.setAttribute('target', '_blank');
     node.setAttribute('rel', 'noopener noreferrer');
   }
@@ -137,10 +163,14 @@ async function readReply(targetEl, response) {
     if (!frame) frame = requestAnimationFrame(flush);
   };
 
-  targetEl.classList.add('is-streaming');
+  // `is-waiting` shows three dots until the first token lands. A tool call on the
+  // agent's side can keep the bubble silent for several seconds, and a bare
+  // blinking caret reads as a frozen page rather than as work in progress.
+  targetEl.classList.add('is-streaming', 'is-waiting');
   try {
     for await (const message of parseNDJSONStream(response)) {
       if (message.type === "token") {
+        targetEl.classList.remove('is-waiting');
         markdown += message.text;
         schedule();
       } else if (message.type === "error") {
@@ -160,7 +190,7 @@ async function readReply(targetEl, response) {
     // writes into this same element.
     if (frame) cancelAnimationFrame(frame);
     flush();
-    targetEl.classList.remove('is-streaming');
+    targetEl.classList.remove('is-streaming', 'is-waiting');
   }
 }
 

@@ -2,6 +2,8 @@
 <html lang="{{ meta.lang }}">
 <head>
 <meta charset="UTF-8">
+<!-- Second line of defence behind DOMPurify: only scripts served from this origin can run. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><!-- TODO(content): meta.title -->{{ meta.title }}</title>
 <meta name="description" content="<!-- TODO(content): meta.description -->{{ meta.description }}">
@@ -186,6 +188,7 @@
           id="chat-input"
           placeholder="{{ chat.placeholder }}"
           aria-label="Ton message"
+          maxlength="2000"
         >
         <button type="submit" aria-label="Envoyer">
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
