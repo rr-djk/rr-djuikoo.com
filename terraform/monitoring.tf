@@ -67,8 +67,11 @@ resource "aws_cloudwatch_dashboard" "bedrock_cost" {
       },
 
       # Only widget linking spend to a single session (others are global aggregates).
-      # Reads chat.usage logs from agent.mjs (stays empty until code is deployed).
+      # Reads chat.usage logs from agent/usage.mjs.
       # Exact equality 'filter event = ...' speeds up queries using field indexing.
+      # Split by agent: one exchange now emits one line per agent that ran, so the
+      # gatekeeper's share of a conversation is readable next to the orchestrator's.
+      # Limit raised accordingly, to keep covering roughly as many sessions as before.
       {
         type   = "log"
         x      = 0
@@ -76,7 +79,7 @@ resource "aws_cloudwatch_dashboard" "bedrock_cost" {
         width  = 24
         height = 8
         properties = {
-          title  = "Tokens par conversation"
+          title  = "Tokens par conversation et par agent"
           view   = "table"
           region = var.aws_region
           query  = <<-EOT
@@ -85,10 +88,10 @@ resource "aws_cloudwatch_dashboard" "bedrock_cost" {
             | stats sum(inputTokens) as tokensEntree,
                     sum(outputTokens) as tokensSortie,
                     sum(cycles) as tours,
-                    count(*) as reponses
-              by sessionId
+                    count(*) as appels
+              by sessionId, agent
             | sort tokensSortie desc
-            | limit 20
+            | limit 40
           EOT
         }
       },
