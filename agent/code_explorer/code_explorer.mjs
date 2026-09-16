@@ -18,8 +18,10 @@ const MODEL_ID = process.env.BEDROCK_MODEL_ID ?? "global.anthropic.claude-haiku-
 
 // Its report is handed back to the orchestrator, which replays it in its own
 // context: every token here is paid twice. The prompt asks for brevity, this
-// enforces it.
-const MAX_TOKENS = 1024;
+// enforces it. Raised from 1024: a report on a broad question ran from 760 to
+// past 1024 tokens across identical runs, and a report cut at the limit throws
+// MaxTokensError, so the orchestrator got no report at all.
+const MAX_TOKENS = 2048;
 
 // Three budgets, one shared allowance. Bytes read is the one that bites: a 30 KB
 // file is roughly 8,000 tokens, and the context replays them on every later turn.
