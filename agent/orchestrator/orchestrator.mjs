@@ -5,7 +5,7 @@ import { z } from "zod";
 import { loadContent } from "./content.mjs";
 import { ORCHESTRATOR_PROMPT } from "./prompts.mjs";
 import { logUsage } from "../usage.mjs";
-import { isRelevant, OFF_TOPIC_REPLY } from "../gatekeeper/gatekeeper.mjs";
+import { refusalFor } from "../gatekeeper/gatekeeper.mjs";
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
   marshallOptions: { removeUndefinedValues: true },
@@ -150,8 +150,9 @@ export async function* answerWith(message, sessionId) {
   // refused message is never written to the session either: keeping the attempt
   // would leave it in the context of every later turn, which is exactly how the
   // orchestrator was talked out of its instructions.
-  if (!(await isRelevant(message, sessionId))) {
-    yield { type: "token", text: OFF_TOPIC_REPLY };
+  const refusal = await refusalFor(message, sessionId);
+  if (refusal) {
+    yield { type: "token", text: refusal };
     return;
   }
 
