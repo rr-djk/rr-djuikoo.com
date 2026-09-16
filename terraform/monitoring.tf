@@ -185,15 +185,18 @@ resource "aws_sns_topic_policy" "bedrock_alerts" {
 
 # The budget above reads billing data that lands hours late. Token counts publish
 # within minutes, so this catches an inflated conversation while it is running.
-# 25000 input tokens per 5 minutes is out of reach of a real visitor. Most slices
-# are empty at current traffic, hence notBreaching.
+# The threshold started at 25000, below a single legitimate question: one code
+# explorer run on MyAm measured 45841 input tokens, its tool results replayed on
+# every round trip. 200000 leaves room for a few such questions in the same five
+# minutes and still catches a sustained abuse. Most slices are empty at current
+# traffic, hence notBreaching.
 #
 # One breaching period out of one, on purpose. The usual advice is M out of N, so
 # that a lone spike on an error or latency metric is not paged as an incident.
 # Here a single 5-minute slice at this level is money already spent.
 resource "aws_cloudwatch_metric_alarm" "bedrock_input_tokens" {
   alarm_name        = "rr-djuikoo-bedrock-input-tokens"
-  alarm_description = "Bedrock input tokens above 25000 in 5 minutes: possible cost amplification on /api/chat."
+  alarm_description = "Bedrock input tokens above 200000 in 5 minutes: possible cost amplification on /api/chat."
 
   namespace   = "AWS/Bedrock"
   metric_name = "InputTokenCount"
@@ -202,7 +205,7 @@ resource "aws_cloudwatch_metric_alarm" "bedrock_input_tokens" {
   statistic           = "Sum"
   period              = 300
   evaluation_periods  = 1
-  threshold           = 25000
+  threshold           = 200000
   comparison_operator = "GreaterThanThreshold"
   treat_missing_data  = "notBreaching"
 
