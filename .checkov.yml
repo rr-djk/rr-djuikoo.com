@@ -43,3 +43,6 @@ skip-check:
   # Origin failover non applicable : origine S3 unique servie par OAC,
   # pas d'origine secondaire / réplication justifiée pour un site perso.
   - CKV_AWS_310
+
+  # SNS alertes Bedrock non chiffré volontairement.
+  - CKV_AWS_26
