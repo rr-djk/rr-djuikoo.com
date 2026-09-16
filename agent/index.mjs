@@ -9,6 +9,12 @@ const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
   marshallOptions: { removeUndefinedValues: true },
 });
 
+// CloudFront's origin response timeout measures the silence between two packets,
+// not the total duration. A long tool call - the code explorer reading a whole
+// repository - would otherwise look like a dead origin and get cut. The browser
+// ignores this event type: readReply only handles token, error and done.
+const HEARTBEAT_MS = 10_000;
+
 const RATE_LIMIT_MAX = 20;
 const RATE_LIMIT_WINDOW_SECONDS = 10 * 60;
 
@@ -70,8 +76,13 @@ export const handler = awslambda.streamifyResponse(
       const message = body.message ?? "Hello!";
       const sessionId = body.sessionId ?? "no-session";
 
-      for await (const chunk of answerWith(message, sessionId)) {
-        send(chunk);
+      const heartbeat = setInterval(() => send({ type: "ping" }), HEARTBEAT_MS);
+      try {
+        for await (const chunk of answerWith(message, sessionId)) {
+          send(chunk);
+        }
+      } finally {
+        clearInterval(heartbeat);
       }
       send({ type: "done" });
     } catch (err) {
