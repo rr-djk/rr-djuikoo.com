@@ -65,6 +65,33 @@ function ownerHandle(contact) {
     return match?.[1] ?? null;
 }
 
+/**
+ * Wraps the explorer's report for the orchestrator and puts the attribution last.
+ *
+ * The report is third-party data: it paraphrases files from a repository anyone
+ * with merge rights can write to, including one the owner does not control. A
+ * file starting with its own "ATTRIBUTION:" line used to sit next to the real
+ * one with nothing telling the model which was true. The marker is neutralised
+ * inside the report, the report is fenced, and the real line comes after it so
+ * it is the last word the model reads.
+ *
+ * @param {object} args
+ * @param {string} args.attribution - The ATTRIBUTION line computed from content.json.
+ * @param {string} args.owner - GitHub account of the repository.
+ * @param {string} args.repo - Repository name.
+ * @param {string} args.report - The explorer's report, untrusted.
+ * @returns {string} Text returned to the orchestrator as the tool result.
+ */
+export function formatExplorerReport({ attribution, owner, repo, report }) {
+    const fenced = report
+        .replace(/ATTRIBUTION\s*:/gi, "[attribution claim removed]")
+        // A closing tag in the report would end the fence early and let the rest
+        // read as if it came from outside it.
+        .replace(/<\s*\/?\s*explorer_report\s*>/gi, "[tag removed]");
+
+    return `Repository: ${owner}/${repo}\n\n<explorer_report>\n${fenced}\n</explorer_report>\n\n${attribution}`;
+}
+
 // Tools are built per invocation from the content loaded for that invocation,
 // which keeps the callbacks synchronous over plain data and confines the
 // asynchronous load to a single place. sessionId rides along so the sub-agent's
@@ -209,11 +236,11 @@ export function makeTools(content, sessionId) {
             // when writing the response, avoiding hallucinations in long multi-turn chats.
             const attribution = foreign
                 ? `ATTRIBUTION: this repository belongs to '${target.owner}', not to ${ownerName}. ` +
-                    `It is a collaborative project. The code below is the team's work. Present as his only what ` +
+                    `It is a collaborative project. The code described above is the team's work. Present as his only what ` +
                     `the '${project.name}' entry credits to him, and say plainly that the project was built with others.`
                 : `ATTRIBUTION: this repository belongs to ${ownerName}'s own account.`;
 
-            return `${attribution}\n\nRepository: ${target.owner}/${target.repo}\n\n${report}`;
+            return formatExplorerReport({ attribution, owner: target.owner, repo: target.repo, report });
         },
     });
 

@@ -28,9 +28,35 @@ const ALLOWED_TAGS = [
 ];
 const ALLOWED_ATTR = ['href'];
 
+// Hosts the site's own content links to (site/content.json). The reply can be
+// steered by text the owner does not control - a file in a public repository the
+// code explorer read - so a link to anywhere else would reach the visitor as a
+// clickable link served from this domain. Update when the profile adds a host.
+const ALLOWED_LINK_HOSTS = new Set([
+  'github.com', 'www.linkedin.com', 'learn.microsoft.com', 'rr-djuikoo.com',
+]);
+
+/**
+ * Tells whether a link in the agent's reply may stay clickable.
+ * @param {string|null} href - The sanitized href attribute.
+ * @returns {boolean} True for mailto: or an allowed host.
+ */
+function isAllowedLink(href) {
+  if (!href) return false;
+  if (href.startsWith('mailto:')) return true;
+  try {
+    return ALLOWED_LINK_HOSTS.has(new URL(href, location.origin).hostname);
+  } catch {
+    return false;
+  }
+}
+
 // Links in the agent's reply should not navigate the chat away from the page.
 DOMPurify.addHook('afterSanitizeAttributes', (node) => {
   if (node.tagName === 'A') {
+    // The text stays, only the link goes: the visitor still reads what the
+    // agent wrote, but nothing off the allowlist can be clicked.
+    if (!isAllowedLink(node.getAttribute('href'))) node.removeAttribute('href');
     node.setAttribute('target', '_blank');
     node.setAttribute('rel', 'noopener noreferrer');
   }
