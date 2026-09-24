@@ -48,6 +48,12 @@ Le workflow `.github/workflows/security-scan.yml` s'exécute sur chaque pull req
 
 ### Point d'entrée `/api/chat` (`agent/index.mjs`)
 
+- **Défi anti-bot au premier message (Cloudflare Turnstile)** :
+  - Le premier message d'une session exige la résolution d'un défi Turnstile avant tout chargement d'historique ou appel Bedrock, protégeant le budget d'inférence contre les requêtes automatisées.
+  - La validation serveur vérifie le jeton auprès de Cloudflare (`siteverify`), contrôle l'action (`chat_first_message`), le nom d'hôte (`rr-djuikoo.com`) et limite la taille du jeton à 2048 caractères.
+  - La validation réussie est enregistrée dans l'élément de session DynamoDB (`captchaVerified: true`) via `UpdateCommand`. Les messages ultérieurs de la même session ne redemandent pas de captcha.
+  - En cas d'indisponibilité ou d'erreur réseau avec Cloudflare, la validation bascule en _fail-open_ pour ne pas bloquer les visiteurs légitimes.
+  - Le secret de validation est stocké dans AWS SSM (`SecureString`) et mis en cache mémoire au premier appel.
 - **Adresse IP non falsifiable** : La limite de débit (20 requêtes par tranche de 10 minutes) identifie le visiteur par `cloudfront-viewer-address`, écrit par CloudFront, et non par le premier élément de `X-Forwarded-For`, que le client écrit lui-même. L'adresse est coupée au dernier `:` pour retirer le port sans tronquer une IPv6. À défaut, le dernier élément de `X-Forwarded-For`, ajouté par CloudFront, est utilisé.
 - **Fenêtre de débit dans la clé** : Le numéro de la tranche de 10 minutes fait partie de la clé DynamoDB. Le compteur repart à zéro à chaque tranche sans dépendre du TTL, dont la suppression peut prendre plusieurs jours.
 - **Identifiant de session validé** : `sessionId` doit être un UUID v4, la forme que génère le navigateur. Toute autre valeur, absente comprise, est refusée avec `INVALID_SESSION` avant tout appel Bedrock : un identifiant devinable permettrait de reprendre la conversation d'un autre visiteur.
