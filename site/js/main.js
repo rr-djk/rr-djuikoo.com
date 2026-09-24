@@ -8,6 +8,9 @@ const sessionId = crypto.randomUUID();
 
 const AGENT_ENDPOINT = '/api/chat';
 
+// Public by design — a Turnstile site key carries no secret.
+const TURNSTILE_SITE_KEY = '0x4AAAAAAFBaTLxwAXT6SVZF';
+
 const chatForm = document.getElementById('chat-form');
 const chatInput = document.getElementById('chat-input');
 const chatBody = document.getElementById('chat-body');
@@ -75,17 +78,59 @@ function renderMarkdown(text) {
 // ends with `done`, with `error`, or with a failed fetch.
 let isBusy = false;
 
+// Only the first /api/chat call of a session needs a token: the backend marks
+// the session verified once it accepts one, and the widget is never shown
+// again after that. Starts locked, since no token exists until the widget
+// resolves.
+let captchaToken = null;
+let captchaWidgetId = null;
+let awaitingCaptcha = true;
+
 /**
- * Locks or unlocks the chat form while a reply is streaming.
+ * Locks or unlocks the chat form while a reply is streaming, or while no
+ * captcha token is available yet.
  * @param {boolean} busy - Whether a request is in flight.
  */
 function setBusy(busy) {
   isBusy = busy;
-  chatInput.disabled = busy;
-  chatSubmitBtn.disabled = busy;
+  const locked = busy || awaitingCaptcha;
+  chatInput.disabled = locked;
+  chatSubmitBtn.disabled = locked;
   chatInput.setAttribute('aria-busy', String(busy));
-  if (!busy) chatInput.focus();
+  if (!locked) chatInput.focus();
 }
+setBusy(false);
+
+/**
+ * Called by the Turnstile widget once the visitor solves the challenge.
+ * @param {string} token - The cf-turnstile-response value to send with /api/chat.
+ */
+function onTurnstileVerified(token) {
+  captchaToken = token;
+  awaitingCaptcha = false;
+  setBusy(isBusy);
+}
+
+/**
+ * Called by the Turnstile widget when a solved token times out unused.
+ */
+function onTurnstileExpired() {
+  captchaToken = null;
+  awaitingCaptcha = true;
+  setBusy(isBusy);
+}
+
+// Named via the api.js `?onload=` query param, so Turnstile calls it itself
+// once its script has loaded - no polling for window.turnstile needed.
+window.onTurnstileLoad = () => {
+  captchaWidgetId = window.turnstile.render('#turnstile-widget', {
+    sitekey: TURNSTILE_SITE_KEY,
+    action: 'chat_first_message',
+    size: 'flexible',
+    callback: onTurnstileVerified,
+    'expired-callback': onTurnstileExpired,
+  });
+};
 
 /**
  * Hashes a request body for CloudFront's SigV4 signature.
@@ -174,11 +219,17 @@ async function readReply(targetEl, response) {
         markdown += message.text;
         schedule();
       } else if (message.type === "error") {
-        // Rate limiting comes back as a 200 with this code, not as an HTTP error.
-        markdown =
-          message.code === "RATE_LIMITED"
-            ? "[Namespace] Trop de questions d'affilée. Réessaie dans quelques minutes."
-            : message.text;
+        // These all come back as a 200 with a code, not as an HTTP error.
+        if (message.code === "RATE_LIMITED") {
+          markdown = "[Namespace] Trop de questions d'affilée. Réessaie dans quelques minutes.";
+        } else if (message.code === "CAPTCHA_REQUIRED" || message.code === "CAPTCHA_INVALID") {
+          markdown = "[Namespace] Merci de résoudre le défi de sécurité avant d'envoyer un message.";
+          captchaToken = null;
+          awaitingCaptcha = true;
+          if (captchaWidgetId !== null) window.turnstile.reset(captchaWidgetId);
+        } else {
+          markdown = message.text;
+        }
         schedule();
       } else if (message.type === "done") {
         break;
@@ -210,7 +261,7 @@ chatForm.addEventListener('submit', async (e) => {
   try {
     // The body is built once and reused verbatim: the hash must cover the exact
     // bytes that are sent, or CloudFront's signature will not match.
-    const body = JSON.stringify({ message, sessionId });
+    const body = JSON.stringify({ message, sessionId, captchaToken });
     const response = await fetch(AGENT_ENDPOINT, {
       method: 'POST',
       headers: {
