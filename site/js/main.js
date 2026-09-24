@@ -120,6 +120,19 @@ function onTurnstileExpired() {
   setBusy(isBusy);
 }
 
+/**
+ * Removes the Turnstile widget once it is no longer needed. Only called after
+ * a backend response actually accepted the session - not right when the
+ * widget itself reports solved, since a server-side rejection still needs to
+ * reset it for another attempt.
+ */
+function hideCaptchaWidget() {
+  if (captchaWidgetId === null) return;
+  window.turnstile.remove(captchaWidgetId);
+  captchaWidgetId = null;
+  document.getElementById('turnstile-widget')?.remove();
+}
+
 // Named via the api.js `?onload=` query param, so Turnstile calls it itself
 // once its script has loaded - no polling for window.turnstile needed.
 window.onTurnstileLoad = () => {
@@ -278,6 +291,7 @@ chatForm.addEventListener('submit', async (e) => {
     }
 
     await readReply(agentMessageEl, response);
+    if (!awaitingCaptcha) hideCaptchaWidget();
   } catch (err) {
     agentMessageEl.textContent = "[Namespace] Error calling the agent.";
     console.error(err);
