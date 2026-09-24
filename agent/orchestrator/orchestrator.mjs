@@ -31,7 +31,7 @@ async function loadHistory(sessionId) {
             Key: { sessionId },
         })
     );
-    return resp.Item ? JSON.parse(resp.Item.messages) : [];
+    return resp.Item?.messages ? JSON.parse(resp.Item.messages) : [];
 }
 
 async function saveHistory(sessionId, messages) {
