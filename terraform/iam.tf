@@ -131,6 +131,17 @@ data "aws_iam_policy_document" "chat" {
     ]
     resources = ["${aws_s3_bucket.site.arn}/content.json"]
   }
+
+  # The parameter's value is never read by Terraform so the ARN is built directly
+  # rather than through a `data "aws_ssm_parameter"` block.
+  statement {
+    sid    = "ReadTurnstileSecret"
+    effect = "Allow"
+    actions = [
+      "ssm:GetParameter",
+    ]
+    resources = ["arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter${var.turnstile_secret_param_name}"]
+  }
 }
 
 resource "aws_iam_role_policy" "chat" {
