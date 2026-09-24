@@ -17,6 +17,8 @@ Browser
   ├── CloudFront → S3 → Site statique
   └── /api/chat → Lambda (Response Stream)
                    ├── DynamoDB (Sessions & Rate Limit)
+                   ├── SSM Parameter Store (Secret Turnstile)
+                   ├── Cloudflare Siteverify (Validation 1er message)
                    ├── S3 (content.json - Cache TTL 5 min)
                    └── Multi-Agent Strands (Claude Haiku 4.5)
                         ├── Gatekeeper (Filtre hors-sujet)
@@ -24,7 +26,7 @@ Browser
                         └── Code Explorer (Sub-agent GitHub /tmp)
 ```
 
-CloudFront distribue le site statique stocké sur S3 et achemine les appels `/api/*` vers une fonction Lambda URL (avec signature SigV4 OAC). La Lambda exécute un système multi-agent Strands qui filtre les questions hors-sujet, consulte le profil (`content.json`) et explore le code source des projets publics sur GitHub au besoin. Des trames de maintien de connexion (`type: ping`) sont transmises toutes les 10 secondes pendant le streaming NDJSON.
+CloudFront distribue le site statique stocké sur S3 et achemine les appels `/api/*` vers une fonction Lambda URL (avec signature SigV4 OAC). Au premier message, la Lambda vérifie le défi Cloudflare Turnstile résolu par le navigateur afin de filtrer le trafic automatisé avant d'invoquer Bedrock. La Lambda exécute un système multi-agent Strands qui filtre les questions hors-sujet, consulte le profil (`content.json`) et explore le code source des projets publics sur GitHub au besoin. Des trames de maintien de connexion (`type: ping`) sont transmises toutes les 10 secondes pendant le streaming NDJSON.
 
 ## Développement local
 
@@ -47,11 +49,28 @@ pre-commit install           # installe les hooks de contrôle local
 pre-commit run --all-files   # exécute tous les vérificateurs (linter, formatage, sécurité, vendor)
 ```
 
-Pour gérer l'infrastructure Terraform, créez au préalable votre fichier de configuration d'environnement à partir de l'exemple :
+Pour gérer l'infrastructure Terraform, créez d'abord votre fichier d'environnement :
 
 ```bash
 cp .env.example .env
 # Éditez .env pour spécifier votre adresse email d'alerte budgétaire
+```
+
+Provisionnez ensuite le secret Cloudflare Turnstile dans AWS SSM Parameter Store. Une étape manuelle unique et indépendante de `.env`, puisque ce secret ne doit jamais transiter par Terraform (voir [docs/infrastructure.md](docs/infrastructure.md)). Consultez la [documentation Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/get-started/) pour générer les clés, puis exécutez directement dans votre terminal :
+
+```bash
+aws ssm put-parameter \
+  --name "/rr-djuikoo/turnstile-secret-key" \
+  --value "VOTRE_SECRET_CLOUDFLARE" \
+  --type "SecureString" \
+  --overwrite
+```
+
+Cloudflare n'affiche cette clé secrète qu'une seule fois, à sa création : une fois la commande exécutée, elle ne vivra que dans SSM.
+
+Lancez enfin le plan et l'application Terraform :
+
+```bash
 source .env && make plan     # prépare les dépendances Node.js et génère le plan Terraform
 source .env && make apply    # applique le plan validé
 ```

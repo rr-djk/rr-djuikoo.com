@@ -13,7 +13,8 @@ Le code d'infrastructure est situé dans le dossier `terraform/` :
 - `cloudfront.tf` : distribution CloudFront, contrôles OAC et politique de bucket fusionnée.
 - `lambda.tf` : fonction Lambda `rr-djuikoo-chat`, URL de fonction et packaging.
 - `dynamodb.tf` : tables DynamoDB pour les sessions et le contrôle du débit.
-- `iam.tf` : rôles et politiques IAM pour la Lambda et les accès Bedrock.
+- `iam.tf` : rôles et politiques IAM pour la Lambda (accès Bedrock, SSM Parameter Store, S3 et tables DynamoDB).
+- `variables.tf` et `terraform.tfvars` : déclaration et valeurs des paramètres du projet (dont `turnstile_secret_param_name`).
 - `acm.tf` et `route53.tf` : gestion du certificat TLS et des enregistrements DNS.
 - `monitoring.tf` : tableau de bord CloudWatch et alerte budgétaire mensuelle Bedrock.
 
@@ -78,3 +79,19 @@ Le fichier `monitoring.tf` configure deux mécanismes de contrôle des coûts :
    - Notifications envoyées par email dès 80 % du budget réel atteint et dès 100 % du budget prévisionnel atteint.
    - L'adresse email de destination est transmise via la variable `var.budget_alert_email` (`TF_VAR_budget_alert_email` dans `.env`).
    - Ce budget est un mécanisme d'alerte purement passif sans coupure automatique ; la protection en temps réel est assurée par `maxTokens` dans le code des agents, la limite de concurrence Lambda et le rate limiting DynamoDB.
+
+### 9. Secret Cloudflare Turnstile hors-bande (SSM Parameter Store)
+
+Le secret de validation du captcha est stocké dans AWS SSM Parameter Store sous forme de `SecureString`.
+
+- **Création hors Terraform** : Pour éviter qu'un secret ne soit tracé dans le state Terraform (`terraform.tfstate`), le paramètre est créé localement via l'AWS CLI :
+  ```bash
+  aws ssm put-parameter \
+    --name "/rr-djuikoo/turnstile-secret-key" \
+    --value "VOTRE_SECRET_CLOUDFLARE" \
+    --type "SecureString" \
+    --overwrite
+  ```
+  Consultez la [documentation officielle Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/get-started/) pour créer le widget et générer les clés.
+- **Accès Lambda & IAM** : La politique IAM `chat` autorise strictement `ssm:GetParameter` sur l'ARN du paramètre. La fonction Lambda le charge au premier appel avec déchiffrement (`WithDecryption: true`) et le met en cache mémoire.
+- **Mise à jour de session DynamoDB** : La permission IAM sur `SESSIONS_TABLE` autorise `dynamodb:UpdateItem` (et non `PutItem`) afin de persister l'attribut `captchaVerified: true` dès la validation sans risquer d'écraser l'historique de messages sauvegardé ultérieurement.

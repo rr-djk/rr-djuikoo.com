@@ -52,7 +52,23 @@ Ce workflow s'exécute uniquement si `Security Scan` a réussi sur la branche `m
 
 L'infrastructure AWS (fichiers `.tf` sous `terraform/`) est appliquée exclusivement depuis un poste de travail autorisé.
 
-La variable `TF_VAR_budget_alert_email` est requise pour configurer l'adresse de réception des alertes de budget Bedrock sans exposer d'adresse email dans le dépôt public. Elle doit être définie dans un fichier `.env` local (basé sur `.env.example`) :
+### Prérequis d'infrastructure
+
+1. **Alerte budgétaire** : La variable `TF_VAR_budget_alert_email` est requise pour configurer l'adresse de réception des alertes de budget Bedrock sans exposer d'adresse email dans le dépôt public. Elle doit être définie dans un fichier `.env` local (basé sur `.env.example`).
+2. **Secret Cloudflare Turnstile** : Le premier message du chat est protégé par un captcha Cloudflare Turnstile. Pour créer le widget et générer la clé de site (_sitekey_) ainsi que la clé secrète (_secret key_), consultez la [documentation officielle Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/get-started/).
+   Le secret ne transite jamais dans Terraform ni dans `terraform.tfstate` : il doit être créé manuellement en local dans AWS SSM Parameter Store avant le premier déploiement :
+
+   ```bash
+   aws ssm put-parameter \
+     --name "/rr-djuikoo/turnstile-secret-key" \
+     --value "VOTRE_SECRET_CLOUDFLARE" \
+     --type "SecureString" \
+     --overwrite
+   ```
+
+   _(Adaptez `--name` si vous personnalisez `turnstile_secret_param_name`, par exemple `/mon-app/turnstile-secret`)._
+
+### Déploiement
 
 ```bash
 cp .env.example .env

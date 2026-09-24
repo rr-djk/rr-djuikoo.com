@@ -1,6 +1,6 @@
 import { Agent, BedrockModel, tool } from "@strands-agents/sdk";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { z } from "zod";
 import { loadContent } from "./content.mjs";
 import { ORCHESTRATOR_PROMPT } from "./prompts.mjs";
@@ -31,17 +31,21 @@ async function loadHistory(sessionId) {
             Key: { sessionId },
         })
     );
-    return resp.Item ? JSON.parse(resp.Item.messages) : [];
+    return resp.Item?.messages ? JSON.parse(resp.Item.messages) : [];
 }
 
 async function saveHistory(sessionId, messages) {
+    // A merge, not a replace: index.mjs may have set captchaVerified on this
+    // same item before the orchestrator ever ran, and a PutCommand here would
+    // wipe it on every turn.
     await ddb.send(
-        new PutCommand({
+        new UpdateCommand({
             TableName: process.env.SESSIONS_TABLE,
-            Item: {
-                sessionId,
-                messages: JSON.stringify(messages),
-                expiresAt: Math.floor(Date.now() / 1000) + 24 * 60 * 60,
+            Key: { sessionId },
+            UpdateExpression: "SET messages = :messages, expiresAt = :expiresAt",
+            ExpressionAttributeValues: {
+                ":messages": JSON.stringify(messages),
+                ":expiresAt": Math.floor(Date.now() / 1000) + 24 * 60 * 60,
             },
         })
     );

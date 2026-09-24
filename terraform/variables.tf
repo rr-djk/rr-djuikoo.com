@@ -40,6 +40,15 @@ variable "bedrock_model_id" {
   default     = "global.anthropic.claude-haiku-4-5-20251001-v1:0"
 }
 
+# Name only, never the value: the SSM parameter itself is created out-of-band,
+# so its secret never passes through a Terraform resource and never lands
+# in terraform.tfstate.
+variable "turnstile_secret_param_name" {
+  description = "Name of the SSM SecureString parameter holding the Turnstile secret key."
+  type        = string
+  default     = "/rr-djuikoo/turnstile-secret-key"
+}
+
 variable "domain_name" {
   description = "Root domain name for the site (used for ACM and Route53)."
   type        = string

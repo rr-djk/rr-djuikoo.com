@@ -48,7 +48,7 @@ site/index.html   site/content.json
 
 ```
 Browser
-   │  POST /api/chat (NDJSON)
+   │  POST /api/chat {message, sessionId, captchaToken}
    ▼
 CloudFront (/api/*)
    │  SigV4 (OAC)
@@ -56,6 +56,8 @@ CloudFront (/api/*)
 Lambda Function URL (AWS_IAM)
    │
    ├─► DynamoDB (Rate Limit & Sessions)
+   ├─► SSM Parameter Store (Secret Turnstile, cache mémoire)
+   ├─► Cloudflare Siteverify (Validation captcha au 1er message, fail-open)
    ├─► S3 (Chargement synchrone content.json, cache TTL 5 min)
    ├─► Heartbeat (Ping NDJSON toutes les 10s)
    │
@@ -72,9 +74,9 @@ Streaming NDJSON (tokens / ping / done / error)
 Browser (Rendu Markdown & Animation is-waiting)
 ```
 
-1. **Envoi de la demande** : Le navigateur génère un `sessionId` unique et envoie une requête HTTP POST `/api/chat` contenant le message et le hachage SHA-256 du corps (`X-Amz-Content-Sha256`).
+1. **Envoi de la demande** : Le navigateur génère un `sessionId` unique et envoie une requête HTTP POST `/api/chat` contenant le message, le `sessionId`, le champ `captchaToken` (présent dans chaque requête, mais qui n'a d'effet que pour le premier message d'une session) et le hachage SHA-256 du corps (`X-Amz-Content-Sha256`).
 2. **Acheminement sécurisé** : CloudFront intercepte l'appel sous `/api/*` et le redirige vers la Lambda URL. La signature SigV4 est appliquée par CloudFront via Origin Access Control (OAC).
-3. **Contrôle de débit, chargement du contenu & Heartbeat** : La Lambda (`agent/index.mjs`) vérifie les limites de débit dans DynamoDB (`RATE_LIMIT_TABLE`, max 20 requêtes / 10 min par IP). L'IP est lue dans `cloudfront-viewer-address`, écrit par CloudFront, et le numéro de la tranche de 10 minutes fait partie de la clé, si bien que le compteur repart à zéro à chaque tranche. Un `sessionId` qui n'est pas un UUID v4 est refusé (`INVALID_SESSION`) avant tout appel Bedrock, et une erreur inattendue est renvoyée sans détail (`INTERNAL_ERROR`), le détail restant dans CloudWatch. Le fichier `content.json` est chargé de façon synchrone afin de fournir les noms de projets au filtre. Un temporisateur émet un ping NDJSON (`{"type":"ping"}`) toutes les 10 secondes pour maintenir la connexion CloudFront active pendant les opérations longues.
+3. **Contrôle de débit, validation du captcha & chargement du contenu** : La Lambda (`agent/index.mjs`) vérifie les limites de débit dans DynamoDB (`RATE_LIMIT_TABLE`, max 20 requêtes / 10 min par IP). Sur le premier message de la session, la Lambda valide le jeton Turnstile (`agent/captcha.mjs`) auprès de l'API Cloudflare Siteverify à l'aide du secret lu dans SSM (`TURNSTILE_SECRET_PARAM`). La vérification contrôle l'action (`chat_first_message`), le nom d'hôte (`rr-djuikoo.com`) et enregistre `captchaVerified: true` dans DynamoDB via `UpdateCommand`. En cas de panne de Cloudflare, la validation applique le principe _fail-open_ pour ne pas bloquer les utilisateurs. Les messages suivants de la session sont dispensés de captcha. L'IP est lue dans `cloudfront-viewer-address`, écrit par CloudFront, et le numéro de la tranche de 10 minutes fait partie de la clé. Un `sessionId` non conforme à UUID v4 est rejeté (`INVALID_SESSION`) avant tout appel Bedrock. Le fichier `content.json` est chargé de façon synchrone afin de fournir les noms de projets au filtre. Un temporisateur émet un ping NDJSON (`{"type":"ping"}`) toutes les 10 secondes pour maintenir la connexion CloudFront active pendant les opérations longues.
 4. **Filtrage de garde (Gatekeeper)** : Le message passe par l'agent `Gatekeeper` auquel le contenu du profil est transmis. S'il s'agit d'une question hors-sujet, il génère une réponse de refus directe dans la langue du visiteur.
 5. **Orchestration & Outils (Wags)** : Si la question est légitime, l'Orchestrateur Wags prend le relais. Il consulte le profil, répond aux questions sur le parcours ou délègue les questions techniques approfondies au sous-agent `Code Explorer`.
 6. **Réponse en streaming** : Les tokens générés sont transmis au navigateur au format NDJSON (`type: token`, `type: ping`, `type: done` ou `type: error`).
@@ -93,7 +95,10 @@ Browser (Rendu Markdown & Animation is-waiting)
   - Configuration GFM avec retours à la ligne explicites (`breaks: true`).
   - Sanitization stricte (`DOMPurify`) sur une liste blanche de balises (`p`, `code`, `pre`, `ul`, `ol`, `table`, etc.), interdisant l'injection d'images inline (`img`) et forçant `target="_blank" rel="noopener noreferrer"` sur tous les liens hypertextes.
   - Filtre de liens dans le même hook `DOMPurify` : un lien ne reste cliquable que vers un domaine de `ALLOWED_LINK_HOSTS` (les domaines présents dans `content.json`) ou vers `mailto:`. Les autres perdent leur `href` et gardent leur texte. La liste est à tenir à jour si le profil ajoute un domaine.
-- **Content-Security-Policy** : posée en `<meta>` dans `src/index.template.html`, elle n'autorise que les scripts servis par le site, les styles du site et de Google Fonts, et les requêtes vers le même domaine. Elle se vérifie en local sous `make mock`, dans la console du navigateur.
+- **Protection anti-bot (Cloudflare Turnstile)** :
+  - Un widget Cloudflare Turnstile (`#turnstile-widget`) est affiché au bas du chat. Le champ de saisie et le bouton d'envoi restent verrouillés tant que le défi n'est pas résolu (`awaitingCaptcha`).
+  - Dès qu'une réponse backend confirme la session, le widget est retiré du DOM (`hideCaptchaWidget`). En cas d'erreur de validation (`CAPTCHA_REQUIRED` ou `CAPTCHA_INVALID`), le widget est explicitement réinitialisé via `window.turnstile.reset`. Sur expiration du jeton (`expired-callback`), le formulaire se reverrouille sans appel explicite à `reset` : c'est Turnstile qui gère lui-même le renouvellement du défi affiché.
+- **Content-Security-Policy** : posée en `<meta>` dans `src/index.template.html`, elle autorise les scripts et connexions du site, les polices Google Fonts, ainsi que les scripts, connexions et frames nécessaires à Cloudflare Turnstile (`https://challenges.cloudflare.com`). Elle se vérifie en local sous `make mock`, dans la console du navigateur.
 - **Gestion du flux NDJSON & Batching d'affichage** :
   - `site/js/main.js` accumule le Markdown **brut** au fil de la réception du flux NDJSON, jamais du HTML, et re-parse la chaîne complète à chaque rendu. `marked` étant sans état entre deux appels, une syntaxe coupée entre deux tokens (`**`, un lien, une fence) se referme correctement au token suivant.
   - Le rendu HTML et la sanitization sont planifiés par image via `requestAnimationFrame`, regroupant les rafales de tokens en une seule écriture DOM.

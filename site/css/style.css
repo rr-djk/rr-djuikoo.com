@@ -595,6 +595,11 @@ input:focus-visible {
   padding: 16px 24px 24px;
 }
 
+.chat-captcha {
+  margin-bottom: 8px;
+}
+.chat-captcha:empty { display: none; }
+
 #chat-form {
   display: flex;
   align-items: center;
