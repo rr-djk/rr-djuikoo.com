@@ -40,7 +40,7 @@ data "aws_iam_policy_document" "chat" {
     effect = "Allow"
     actions = [
       "dynamodb:GetItem",
-      "dynamodb:PutItem",
+      "dynamodb:UpdateItem",
     ]
     resources = [aws_dynamodb_table.sessions.arn]
   }
