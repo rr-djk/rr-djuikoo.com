@@ -1,6 +1,6 @@
-// Checks the orchestrator's tool wiring on every path that stops before the
-// sub-agent runs. Anything past resolveRepo needs Bedrock and lives in
-// agent-eval.mjs instead - the attribution text in particular.
+// Checks the tool wiring on every path that stops before the sub-agent runs:
+// which agent gets which tools, the refusals, and the attribution. How the
+// model uses the attribution needs Bedrock and lives in agent-eval.mjs instead.
 //
 // No Bedrock, no cost.
 
@@ -10,7 +10,9 @@ import { before, describe, it } from "node:test";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { formatExplorerReport, makeTools } from "../agent/orchestrator/orchestrator.mjs";
+import { toolbox } from "../agent/tools/toolbox.mjs";
+import { createBudget } from "../agent/tools/repository.mjs";
+import { buildAttribution, formatExplorerReport, isForeignRepo } from "../agent/tools/ask_code_explorer.mjs";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 
@@ -27,9 +29,15 @@ const ORIGINAL_TOOLS = [
 let content;
 let tools;
 
+// Never reached by these tests: every path here stops before the sub-agent.
+const exploreRepo = () => {
+  throw new Error("exploreRepo must not run in wiring tests");
+};
+const orchestratorTools = (data) => toolbox.forAgent("orchestrator", { content: data, sessionId: "wiring", exploreRepo });
+
 before(async () => {
   content = JSON.parse(await readFile(join(ROOT, "site/content.json"), "utf8"));
-  tools = makeTools(content, "wiring");
+  tools = orchestratorTools(content);
 });
 
 const byName = (name) => tools.find((t) => t.name === name);
@@ -43,6 +51,19 @@ describe("les outils exposés", () => {
     assert.ok(names.includes("ask_code_explorer"));
     for (const name of ORIGINAL_TOOLS) assert.ok(names.includes(name), `${name} a disparu`);
   });
+
+  it("l'explorateur ne reçoit que ses trois outils de lecture", () => {
+    const names = toolbox.forAgent("code_explorer", { root: ROOT, budget: createBudget() }).map((t) => t.name);
+    assert.deepEqual(names.sort(), ["list_files", "read_file", "search_code"]);
+  });
+
+  it("le garde ne reçoit aucun outil", () => {
+    assert.deepEqual(toolbox.forAgent("gatekeeper", {}), []);
+  });
+
+  it("refuse un agent sans accès déclaré", () => {
+    assert.throws(() => toolbox.forAgent("inconnu", {}), /no tools granted/);
+  });
 });
 
 describe("les refus qui n'atteignent pas le sous-agent", () => {
@@ -53,10 +74,10 @@ describe("les refus qui n'atteignent pas le sous-agent", () => {
   });
 
   it("le dit quand le projet n'a pas de dépôt public", async (t) => {
-    const out = await makeTools(
-      { ...content, projects: [{ name: "SansDepot", links: [{ label: "Site", href: "https://example.com" }] }] },
-      "wiring"
-    )
+    const out = await orchestratorTools({
+      ...content,
+      projects: [{ name: "SansDepot", links: [{ label: "Site", href: "https://example.com" }] }],
+    })
       .find((tool) => tool.name === "ask_code_explorer")
       .invoke({ project_name: "SansDepot", question: "?" });
 
@@ -87,6 +108,27 @@ describe("le rapport de l'explorateur", () => {
     assert.match(attributions[0], /MyAm-org/);
     assert.ok(lines.indexOf(attributions[0]) > lines.indexOf("</explorer_report>"), "l'attribution précède le rapport");
     assert.equal(out.match(/<\/explorer_report>/g).length, 1, "le rapport a fermé l'encadrement lui-même");
+  });
+});
+
+describe("l'attribution", () => {
+  it("un dépôt d'un autre compte est présenté comme un travail d'équipe", () => {
+    assert.equal(isForeignRepo("rr-djk", "MyAm-org"), true);
+    const line = buildAttribution({ ownerName: "Roger", projectName: "MyAm", owner: "MyAm-org", foreign: true });
+    assert.match(line, /^ATTRIBUTION: this repository belongs to 'MyAm-org', not to Roger\./);
+    assert.match(line, /built with others/);
+  });
+
+  it("le compte du propriétaire est reconnu sans tenir compte de la casse", () => {
+    assert.equal(isForeignRepo("rr-djk", "RR-DJK"), false);
+    assert.equal(
+      buildAttribution({ ownerName: "Roger", projectName: "x", owner: "rr-djk", foreign: false }),
+      "ATTRIBUTION: this repository belongs to Roger's own account."
+    );
+  });
+
+  it("sans compte GitHub connu, rien n'est déclaré étranger", () => {
+    assert.equal(isForeignRepo(null, "MyAm-org"), false);
   });
 });
 
