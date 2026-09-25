@@ -10,7 +10,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { makeExplorerTools } from "../agent/code_explorer/code_explorer.mjs";
+import { toolbox } from "../agent/tools/toolbox.mjs";
+import { createBudget } from "../agent/tools/repository.mjs";
 import { fetchRepo, resolveRepo } from "../agent/code_explorer/repo.mjs";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
@@ -24,9 +25,10 @@ before(async () => {
 });
 
 /** Fresh tools over the extracted tree, so each test gets its own budget. */
-const tools = () => {
-  const made = makeExplorerTools(root);
-  return { ...Object.fromEntries(made.tools.map((t) => [t.name, t])), spent: made.spent };
+const tools = (dir = root) => {
+  const budget = createBudget();
+  const made = toolbox.forAgent("code_explorer", { root: dir, budget });
+  return { ...Object.fromEntries(made.map((t) => [t.name, t])), budget };
 };
 
 describe("fonctionnement nominal", () => {
@@ -96,7 +98,7 @@ describe("motif à retour arrière catastrophique", () => {
     await writeFile(join(dir, "long.txt"), `${"a".repeat(5000)}!\n`);
 
     const started = Date.now();
-    const out = await makeExplorerTools(dir).tools.find((x) => x.name === "search_code").invoke({ pattern: "(a+)+$" });
+    const out = await tools(dir).search_code.invoke({ pattern: "(a+)+$" });
     const elapsed = Date.now() - started;
     t.diagnostic(`${elapsed} ms`);
 
@@ -116,16 +118,25 @@ describe("plafond d'appels", () => {
     assert.equal(results.findIndex(spent), 12, "le refus n'est pas tombé au 13e appel");
     assert.match(results[13], /Answer now with what you have already seen/);
   });
+
+  it("le budget épuisé par un outil bloque aussi les deux autres", async () => {
+    const made = tools();
+    for (let i = 0; i < 12; i += 1) await made.list_files.invoke({ path: "." });
+
+    assert.match(await made.read_file.invoke({ path: "scripts/build-site.mjs" }), /^Exploration budget spent/);
+    assert.match(await made.search_code.invoke({ pattern: "escapeHtml" }), /^Exploration budget spent/);
+    assert.equal(made.budget.calls, 12, "un appel refusé a été compté");
+  });
 });
 
 describe("plafond d'octets et troncature", () => {
   it("tronque un fichier de plus de 30 ko", async (t) => {
     const made = tools();
     const big = await made.read_file.invoke({ path: "agent/package-lock.json" });
-    t.diagnostic(`${made.spent().bytes} octets comptés`);
+    t.diagnostic(`${made.budget.bytes} octets comptés`);
 
     assert.match(big, /\[truncated,/);
-    assert.ok(made.spent().bytes <= 30 * 1024, "une lecture a compté plus de 30 ko");
+    assert.ok(made.budget.bytes <= 30 * 1024, "une lecture a compté plus de 30 ko");
   });
 
   it("finit par épuiser le budget d'octets", async (t) => {
@@ -135,8 +146,8 @@ describe("plafond d'octets et troncature", () => {
     // le comportement voulu, le contexte du modèle grossissant tout autant.
     for (let i = 0; i < 4; i += 1) await made.read_file.invoke({ path: "agent/package-lock.json" });
 
-    const after = made.spent();
-    t.diagnostic(`${after.bytes} octets en ${after.calls} appels`);
-    assert.equal(after.exhausted, true);
+    const { budget } = made;
+    t.diagnostic(`${budget.bytes} octets en ${budget.calls} appels`);
+    assert.equal(budget.exhausted(), true);
   });
 });
