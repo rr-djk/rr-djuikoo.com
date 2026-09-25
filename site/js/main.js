@@ -2,12 +2,6 @@
 // CHAT — calls /api/chat via CloudFront
 // ==========================================================
 
-// A random ID for this conversation, sent with every message. The browser
-// holds only this ticket — where the conversation lives is up to your agent.
-const sessionId = crypto.randomUUID();
-
-const AGENT_ENDPOINT = '/api/chat';
-
 // Public by design — a Turnstile site key carries no secret.
 const TURNSTILE_SITE_KEY = '0x4AAAAAAFBaTLxwAXT6SVZF';
 
@@ -78,13 +72,61 @@ function renderMarkdown(text) {
 // ends with `done`, with `error`, or with a failed fetch.
 let isBusy = false;
 
-// Only the first /api/chat call of a session needs a token: the backend marks
-// the session verified once it accepts one, and the widget is never shown
-// again after that. Starts locked, since no token exists until the widget
-// resolves.
-let captchaToken = null;
-let captchaWidgetId = null;
-let awaitingCaptcha = true;
+// Sole owner of the Turnstile state. Only the first /api/chat call of a session
+// needs a token: the backend marks the session verified once it accepts one,
+// and the widget is never shown again after that.
+const captcha = {
+  token: null,
+  widgetId: null,
+  // Starts locked, since no token exists until the widget resolves.
+  awaiting: true,
+
+  render() {
+    this.widgetId = window.turnstile.render('#turnstile-widget', {
+      sitekey: TURNSTILE_SITE_KEY,
+      action: 'chat_first_message',
+      size: 'flexible',
+      callback: (token) => this.onVerified(token),
+      'expired-callback': () => this.onExpired(),
+    });
+  },
+
+  /**
+   * Called by the widget once the visitor solves the challenge.
+   * @param {string} token - The cf-turnstile-response value to send with /api/chat.
+   */
+  onVerified(token) {
+    this.token = token;
+    this.awaiting = false;
+    setBusy(isBusy);
+  },
+
+  /** Called by the widget when a solved token times out unused. */
+  onExpired() {
+    this.token = null;
+    this.awaiting = true;
+    setBusy(isBusy);
+  },
+
+  /** Asks for a new challenge after the backend refused the token. */
+  reset() {
+    this.token = null;
+    this.awaiting = true;
+    if (this.widgetId !== null) window.turnstile.reset(this.widgetId);
+  },
+
+  /**
+   * Removes the widget once it is no longer needed. Only called after a backend
+   * response actually accepted the session - not right when the widget itself
+   * reports solved, since a server-side rejection still needs reset().
+   */
+  hide() {
+    if (this.widgetId === null) return;
+    window.turnstile.remove(this.widgetId);
+    this.widgetId = null;
+    document.getElementById('turnstile-widget')?.remove();
+  },
+};
 
 /**
  * Locks or unlocks the chat form while a reply is streaming, or while no
@@ -93,7 +135,7 @@ let awaitingCaptcha = true;
  */
 function setBusy(busy) {
   isBusy = busy;
-  const locked = busy || awaitingCaptcha;
+  const locked = busy || captcha.awaiting;
   chatInput.disabled = locked;
   chatSubmitBtn.disabled = locked;
   chatInput.setAttribute('aria-busy', String(busy));
@@ -101,49 +143,9 @@ function setBusy(busy) {
 }
 setBusy(false);
 
-/**
- * Called by the Turnstile widget once the visitor solves the challenge.
- * @param {string} token - The cf-turnstile-response value to send with /api/chat.
- */
-function onTurnstileVerified(token) {
-  captchaToken = token;
-  awaitingCaptcha = false;
-  setBusy(isBusy);
-}
-
-/**
- * Called by the Turnstile widget when a solved token times out unused.
- */
-function onTurnstileExpired() {
-  captchaToken = null;
-  awaitingCaptcha = true;
-  setBusy(isBusy);
-}
-
-/**
- * Removes the Turnstile widget once it is no longer needed. Only called after
- * a backend response actually accepted the session - not right when the
- * widget itself reports solved, since a server-side rejection still needs to
- * reset it for another attempt.
- */
-function hideCaptchaWidget() {
-  if (captchaWidgetId === null) return;
-  window.turnstile.remove(captchaWidgetId);
-  captchaWidgetId = null;
-  document.getElementById('turnstile-widget')?.remove();
-}
-
 // Named via the api.js `?onload=` query param, so Turnstile calls it itself
 // once its script has loaded - no polling for window.turnstile needed.
-window.onTurnstileLoad = () => {
-  captchaWidgetId = window.turnstile.render('#turnstile-widget', {
-    sitekey: TURNSTILE_SITE_KEY,
-    action: 'chat_first_message',
-    size: 'flexible',
-    callback: onTurnstileVerified,
-    'expired-callback': onTurnstileExpired,
-  });
-};
+window.onTurnstileLoad = () => captcha.render();
 
 /**
  * Hashes a request body for CloudFront's SigV4 signature.
@@ -197,13 +199,60 @@ async function* parseNDJSONStream(response) {
   }
 }
 
+// The only code that knows how /api/chat is reached: the rest of the page sees
+// a stream of {type, ...} events.
+const chatApi = {
+  endpoint: '/api/chat',
+
+  // A random ID for this conversation, sent with every message. The browser
+  // holds only this ticket — where the conversation lives is up to your agent.
+  sessionId: crypto.randomUUID(),
+
+  /**
+   * Sends one message and returns the reply events.
+   * @param {string} message - The visitor's message.
+   * @param {string|null} captchaToken - Needed only until the session is verified.
+   * @returns {Promise<AsyncGenerator<object>>} Parsed NDJSON events.
+   * @throws {Error} On a failed fetch or a non-2xx response.
+   */
+  async send(message, captchaToken) {
+    // The body is built once and reused verbatim: the hash must cover the exact
+    // bytes that are sent, or CloudFront's signature will not match.
+    const body = JSON.stringify({ message, sessionId: this.sessionId, captchaToken });
+    const response = await fetch(this.endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Amz-Content-Sha256': await sha256Hex(body),
+      },
+      body,
+    });
+
+    if (!response.ok) {
+      const detail = await response.text();
+      console.error(`chat HTTP ${response.status}`, detail);
+      throw new Error(`HTTP ${response.status}`);
+    }
+    return parseNDJSONStream(response);
+  },
+};
+
+// Error codes the backend sends as a 200 with a code, not as an HTTP error.
+// Any code missing here shows the backend's own text.
+const ERROR_MESSAGES = {
+  RATE_LIMITED: "[Namespace] Trop de questions d'affilée. Réessaie dans quelques minutes.",
+  CAPTCHA_REQUIRED: "[Namespace] Merci de résoudre le défi de sécurité avant d'envoyer un message.",
+  CAPTCHA_INVALID: "[Namespace] Merci de résoudre le défi de sécurité avant d'envoyer un message.",
+};
+const CAPTCHA_ERROR_CODES = new Set(['CAPTCHA_REQUIRED', 'CAPTCHA_INVALID']);
+
 /**
- * Reads the NDJSON reply stream and updates the target element.
+ * Reads the reply events and updates the target element.
  * @param {HTMLElement} targetEl - Element to update with streamed tokens.
- * @param {Response} response - Fetch response to consume.
+ * @param {AsyncIterable<object>} events - As returned by chatApi.send.
  * @returns {Promise<void>}
  */
-async function readReply(targetEl, response) {
+async function readReply(targetEl, events) {
   // Accumulates raw Markdown, never HTML: marked is stateless between calls,
   // so re-parsing the whole string on each frame safely closes any `**` (or
   // other syntax) left open by a token cut mid-stream.
@@ -226,23 +275,14 @@ async function readReply(targetEl, response) {
   // blinking caret reads as a frozen page rather than as work in progress.
   targetEl.classList.add('is-streaming', 'is-waiting');
   try {
-    for await (const message of parseNDJSONStream(response)) {
+    for await (const message of events) {
       if (message.type === "token") {
         targetEl.classList.remove('is-waiting');
         markdown += message.text;
         schedule();
       } else if (message.type === "error") {
-        // These all come back as a 200 with a code, not as an HTTP error.
-        if (message.code === "RATE_LIMITED") {
-          markdown = "[Namespace] Trop de questions d'affilée. Réessaie dans quelques minutes.";
-        } else if (message.code === "CAPTCHA_REQUIRED" || message.code === "CAPTCHA_INVALID") {
-          markdown = "[Namespace] Merci de résoudre le défi de sécurité avant d'envoyer un message.";
-          captchaToken = null;
-          awaitingCaptcha = true;
-          if (captchaWidgetId !== null) window.turnstile.reset(captchaWidgetId);
-        } else {
-          markdown = message.text;
-        }
+        markdown = ERROR_MESSAGES[message.code] ?? message.text;
+        if (CAPTCHA_ERROR_CODES.has(message.code)) captcha.reset();
         schedule();
       } else if (message.type === "done") {
         break;
@@ -272,26 +312,9 @@ chatForm.addEventListener('submit', async (e) => {
   setBusy(true);
 
   try {
-    // The body is built once and reused verbatim: the hash must cover the exact
-    // bytes that are sent, or CloudFront's signature will not match.
-    const body = JSON.stringify({ message, sessionId, captchaToken });
-    const response = await fetch(AGENT_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Amz-Content-Sha256': await sha256Hex(body),
-      },
-      body,
-    });
-
-    if (!response.ok) {
-      const detail = await response.text();
-      console.error(`chat HTTP ${response.status}`, detail);
-      throw new Error(`HTTP ${response.status}`);
-    }
-
-    await readReply(agentMessageEl, response);
-    if (!awaitingCaptcha) hideCaptchaWidget();
+    const events = await chatApi.send(message, captcha.token);
+    await readReply(agentMessageEl, events);
+    if (!captcha.awaiting) captcha.hide();
   } catch (err) {
     agentMessageEl.textContent = "[Namespace] Error calling the agent.";
     console.error(err);
