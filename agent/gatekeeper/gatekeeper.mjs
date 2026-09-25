@@ -1,23 +1,13 @@
 // Screens a visitor message before the orchestrator.
 // Deliberately stateless: Every message is judged on its own.
 
-import { Agent, BedrockModel } from "@strands-agents/sdk";
+import { Agent } from "@strands-agents/sdk";
 import { gatekeeperPrompt } from "./prompts.mjs";
 import { logUsage } from "../usage.mjs";
+import { createModel, MODELS } from "../models.mjs";
 
 const AGENT_NAME = "gatekeeper";
-const MODEL_ID = process.env.BEDROCK_MODEL_ID ?? "global.anthropic.claude-haiku-4-5-20251001-v1:0";
-
-// Enough for the marker plus one sentence in any language. Beyond the output
-// tokens it saves, Bedrock reserves maxTokens against the account quota on every
-// call, so keeping it tight also stops this extra call from eating into the
-// headroom the orchestrator needs.
-const MAX_TOKENS = 100;
-
-const model = new BedrockModel({
-  modelId: MODEL_ID,
-  maxTokens: MAX_TOKENS,
-});
+const model = createModel(AGENT_NAME);
 
 // The refusal sentence is written by the model so it lands in the visitor's own
 // language, the way the orchestrator answers everything else. The marker stays in
@@ -56,7 +46,7 @@ export async function refusalFor(message, sessionId, content) {
     return null;
   }
 
-  logUsage({ agent: AGENT_NAME, sessionId, modelId: MODEL_ID, result });
+  logUsage({ agent: AGENT_NAME, sessionId, modelId: MODELS[AGENT_NAME].modelId, result });
 
   // Anything that is not a clear refusal is a pass, unreadable output included:
   // same reasoning as the catch above.

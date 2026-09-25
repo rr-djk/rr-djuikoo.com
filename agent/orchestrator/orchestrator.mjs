@@ -1,4 +1,4 @@
-import { Agent, BedrockModel, tool } from "@strands-agents/sdk";
+import { Agent, tool } from "@strands-agents/sdk";
 import { z } from "zod";
 import { loadContent } from "./content.mjs";
 import { ORCHESTRATOR_PROMPT } from "./prompts.mjs";
@@ -7,17 +7,10 @@ import { refusalFor } from "../gatekeeper/gatekeeper.mjs";
 import { exploreRepo } from "../code_explorer/code_explorer.mjs";
 import { fetchRepo, RepoError, resolveRepo } from "../code_explorer/repo.mjs";
 import { sessions } from "../dynamo.mjs";
+import { createModel, MODELS } from "../models.mjs";
 
 const AGENT_NAME = "orchestrator";
-const MODEL_ID = process.env.BEDROCK_MODEL_ID ?? "global.anthropic.claude-haiku-4-5-20251001-v1:0";
-
-// maxTokens is set on purpose: left unset, Bedrock reserves the model maximum
-// against the account quota on every call, which throttles even light traffic.
-// It also caps the cost of a single answer, and the prompt asks for brief ones.
-const model = new BedrockModel({
-    modelId: MODEL_ID,
-    maxTokens: 1024,
-});
+const model = createModel(AGENT_NAME);
 
 // Shared by get_project_details and ask_code_explorer so one name never resolves
 // to two different projects depending on which tool the model reached for.
@@ -284,5 +277,5 @@ export async function* answerWith(message, sessionId) {
     }
 
     await sessions.saveHistory(sessionId, agent.messages);
-    logUsage({ agent: AGENT_NAME, sessionId, modelId: MODEL_ID, result });
+    logUsage({ agent: AGENT_NAME, sessionId, modelId: MODELS[AGENT_NAME].modelId, result });
 }

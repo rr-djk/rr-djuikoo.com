@@ -7,21 +7,14 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import { relative, resolve, sep } from "node:path";
 
-import { Agent, BedrockModel, tool } from "@strands-agents/sdk";
+import { Agent, tool } from "@strands-agents/sdk";
 import { z } from "zod";
 
 import { CODE_EXPLORER_PROMPT } from "./prompts.mjs";
 import { logUsage } from "../usage.mjs";
+import { createModel, MODELS } from "../models.mjs";
 
 const AGENT_NAME = "code_explorer";
-const MODEL_ID = process.env.BEDROCK_MODEL_ID ?? "global.anthropic.claude-haiku-4-5-20251001-v1:0";
-
-// Its report is handed back to the orchestrator, which replays it in its own
-// context: every token here is paid twice. The prompt asks for brevity, this
-// enforces it. Raised from 1024: a report on a broad question ran from 760 to
-// past 1024 tokens across identical runs, and a report cut at the limit throws
-// MaxTokensError, so the orchestrator got no report at all.
-const MAX_TOKENS = 2048;
 
 // Three budgets, one shared allowance. Bytes read is the one that bites: a 30 KB
 // file is roughly 8,000 tokens, and the context replays them on every later turn.
@@ -37,7 +30,7 @@ const FILE_TRUNCATE_CHARS = 30 * 1024;
 const MAX_SEARCH_MATCHES = 40;
 const MAX_PATTERN_LENGTH = 200;
 
-const model = new BedrockModel({ modelId: MODEL_ID, maxTokens: MAX_TOKENS });
+const model = createModel(AGENT_NAME);
 
 const BUDGET_SPENT =
   "Exploration budget spent. Answer now with what you have already seen, and say plainly " +
@@ -212,7 +205,7 @@ export async function exploreRepo(root, question, sessionId) {
 
   const result = await agent.invoke(question);
 
-  logUsage({ agent: AGENT_NAME, sessionId, modelId: MODEL_ID, result });
+  logUsage({ agent: AGENT_NAME, sessionId, modelId: MODELS[AGENT_NAME].modelId, result });
 
   const budget = spent();
   console.log(
