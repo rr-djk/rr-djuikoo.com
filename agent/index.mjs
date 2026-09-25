@@ -1,17 +1,11 @@
 // Infra-only plumbing: streams NDJSON back to the browser.
 // No GET / CHAT_HTML here - site is served from S3/CloudFront.
 
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { answerWith } from "./orchestrator/orchestrator.mjs";
 import { isCaptchaVerified } from "./captcha.mjs";
-
-const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
-  marshallOptions: { removeUndefinedValues: true },
-});
+import { sessions, rateLimit } from "./dynamo.mjs";
 
 const HEARTBEAT_MS = 10_000;
-
 const RATE_LIMIT_MAX = 20;
 const RATE_LIMIT_WINDOW_SECONDS = 10 * 60;
 
@@ -59,58 +53,6 @@ function getClientIp(event) {
   return event.requestContext?.http?.sourceIp ?? "127.0.0.1";
 }
 
-async function checkRateLimit(ip) {
-  const table = process.env.RATE_LIMIT_TABLE;
-  if (!table) return { allowed: true };
-  const now = Math.floor(Date.now() / 1000);
-  const windowEnd = now + RATE_LIMIT_WINDOW_SECONDS;
-
-  // The window number is part of the key, so each 10-minute slice starts a fresh
-  // counter. Relying on the TTL to reset may not hold: DynamoDB deletes expired
-  // items within days, not minutes.
-  const windowNumber = Math.floor(now / RATE_LIMIT_WINDOW_SECONDS);
-
-  const res = await ddb.send(
-    new UpdateCommand({
-      TableName: table,
-      Key: { ip: `${ip}#${windowNumber}` },
-      UpdateExpression:
-        "SET #count = if_not_exists(#count, :zero) + :inc, expiresAt = if_not_exists(expiresAt, :windowEnd)",
-      ExpressionAttributeNames: { "#count": "count" },
-      ExpressionAttributeValues: { ":zero": 0, ":inc": 1, ":windowEnd": windowEnd },
-      ReturnValues: "ALL_NEW",
-    })
-  );
-
-  const count = res.Attributes?.count ?? 1;
-  return { allowed: count <= RATE_LIMIT_MAX, count };
-}
-
-// Performs an early check in DynamoDB to verify the CAPTCHA status
-// before incurring LLM/Bedrock costs in loadHistory.
-async function hasVerifiedCaptcha(sessionId) {
-  const table = process.env.SESSIONS_TABLE;
-  if (!table) return true;
-  const res = await ddb.send(new GetCommand({ TableName: table, Key: { sessionId } }));
-  return res.Item?.captchaVerified === true;
-}
-
-// Uses UpdateCommand (upsert) so we don't overwrite the whole item:
-// 1. Creates the session item if this is the user's first message.
-// 2. Preserves captchaVerified when saveHistory updates the session later.
-async function markCaptchaVerified(sessionId) {
-  const table = process.env.SESSIONS_TABLE;
-  if (!table) return;
-  await ddb.send(
-    new UpdateCommand({
-      TableName: table,
-      Key: { sessionId },
-      UpdateExpression: "SET captchaVerified = :true, expiresAt = if_not_exists(expiresAt, :ttl)",
-      ExpressionAttributeValues: { ":true": true, ":ttl": Math.floor(Date.now() / 1000) + 24 * 60 * 60 },
-    })
-  );
-}
-
 function createNdjsonStream(rawStream) {
   const stream = awslambda.HttpResponseStream.from(rawStream, {
     statusCode: 200,
@@ -147,18 +89,18 @@ function parseRequestBody(event) {
   return { message, sessionId, captchaToken };
 }
 
-async function ensureCaptchaVerified(sessionId, captchaToken, ip) {
-  if (await hasVerifiedCaptcha(sessionId)) return;
+async function ensureCaptchaVerified(sessionId, captchaToken, clientIp) {
+  if (await sessions.hasCaptchaVerified(sessionId)) return;
   if (!captchaToken) {
     throw new ChatError("Please solve the captcha challenge first.", "CAPTCHA_REQUIRED");
   }
   if (typeof captchaToken !== "string" || captchaToken.length > MAX_CAPTCHA_TOKEN_CHARS) {
     throw new ChatError("Invalid captcha token.", "CAPTCHA_INVALID");
   }
-  if (!(await isCaptchaVerified(captchaToken, ip))) {
+  if (!(await isCaptchaVerified(captchaToken, clientIp))) {
     throw new ChatError("Captcha verification failed.", "CAPTCHA_INVALID");
   }
-  await markCaptchaVerified(sessionId);
+  await sessions.markCaptchaVerified(sessionId);
 }
 
 // CloudFront's origin response timeout measures the silence between two packets,
@@ -181,14 +123,17 @@ export const handler = awslambda.streamifyResponse(
     const { stream, send } = createNdjsonStream(responseStream);
 
     try {
-      const ip = getClientIp(event);
-      const rl = await checkRateLimit(ip);
-      if (!rl.allowed) {
+      const clientIp = getClientIp(event);
+      const rateLimitResult = await rateLimit.check(clientIp, {
+        windowSeconds: RATE_LIMIT_WINDOW_SECONDS,
+        max: RATE_LIMIT_MAX,
+      });
+      if (!rateLimitResult.allowed) {
         throw new ChatError("Rate limit exceeded. Try again later.", "RATE_LIMITED");
       }
 
       const { message, sessionId, captchaToken } = parseRequestBody(event);
-      await ensureCaptchaVerified(sessionId, captchaToken, ip);
+      await ensureCaptchaVerified(sessionId, captchaToken, clientIp);
       await streamReply(message, sessionId, send);
     } catch (err) {
       if (err instanceof ChatError) {

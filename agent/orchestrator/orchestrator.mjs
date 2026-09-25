@@ -1,6 +1,4 @@
 import { Agent, BedrockModel, tool } from "@strands-agents/sdk";
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { z } from "zod";
 import { loadContent } from "./content.mjs";
 import { ORCHESTRATOR_PROMPT } from "./prompts.mjs";
@@ -8,10 +6,7 @@ import { logUsage } from "../usage.mjs";
 import { refusalFor } from "../gatekeeper/gatekeeper.mjs";
 import { exploreRepo } from "../code_explorer/code_explorer.mjs";
 import { fetchRepo, RepoError, resolveRepo } from "../code_explorer/repo.mjs";
-
-const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
-    marshallOptions: { removeUndefinedValues: true },
-});
+import { sessions } from "../dynamo.mjs";
 
 const AGENT_NAME = "orchestrator";
 const MODEL_ID = process.env.BEDROCK_MODEL_ID ?? "global.anthropic.claude-haiku-4-5-20251001-v1:0";
@@ -23,33 +18,6 @@ const model = new BedrockModel({
     modelId: MODEL_ID,
     maxTokens: 1024,
 });
-
-async function loadHistory(sessionId) {
-    const resp = await ddb.send(
-        new GetCommand({
-            TableName: process.env.SESSIONS_TABLE,
-            Key: { sessionId },
-        })
-    );
-    return resp.Item?.messages ? JSON.parse(resp.Item.messages) : [];
-}
-
-async function saveHistory(sessionId, messages) {
-    // A merge, not a replace: index.mjs may have set captchaVerified on this
-    // same item before the orchestrator ever ran, and a PutCommand here would
-    // wipe it on every turn.
-    await ddb.send(
-        new UpdateCommand({
-            TableName: process.env.SESSIONS_TABLE,
-            Key: { sessionId },
-            UpdateExpression: "SET messages = :messages, expiresAt = :expiresAt",
-            ExpressionAttributeValues: {
-                ":messages": JSON.stringify(messages),
-                ":expiresAt": Math.floor(Date.now() / 1000) + 24 * 60 * 60,
-            },
-        })
-    );
-}
 
 // Shared by get_project_details and ask_code_explorer so one name never resolves
 // to two different projects depending on which tool the model reached for.
@@ -284,7 +252,7 @@ export async function* answerWith(message, sessionId) {
         return;
     }
 
-    const history = await loadHistory(sessionId);
+    const history = await sessions.loadHistory(sessionId);
     const agent = new Agent({
         model,
         systemPrompt: ORCHESTRATOR_PROMPT,
@@ -315,6 +283,6 @@ export async function* answerWith(message, sessionId) {
         }
     }
 
-    await saveHistory(sessionId, agent.messages);
+    await sessions.saveHistory(sessionId, agent.messages);
     logUsage({ agent: AGENT_NAME, sessionId, modelId: MODEL_ID, result });
 }
