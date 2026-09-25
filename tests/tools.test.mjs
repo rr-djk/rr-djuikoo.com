@@ -118,6 +118,15 @@ describe("plafond d'appels", () => {
     assert.equal(results.findIndex(spent), 12, "le refus n'est pas tombé au 13e appel");
     assert.match(results[13], /Answer now with what you have already seen/);
   });
+
+  it("le budget épuisé par un outil bloque aussi les deux autres", async () => {
+    const made = tools();
+    for (let i = 0; i < 12; i += 1) await made.list_files.invoke({ path: "." });
+
+    assert.match(await made.read_file.invoke({ path: "scripts/build-site.mjs" }), /^Exploration budget spent/);
+    assert.match(await made.search_code.invoke({ pattern: "escapeHtml" }), /^Exploration budget spent/);
+    assert.equal(made.budget.calls, 12, "un appel refusé a été compté");
+  });
 });
 
 describe("plafond d'octets et troncature", () => {

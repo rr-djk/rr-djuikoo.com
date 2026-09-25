@@ -36,10 +36,35 @@ export function createBudget() {
     calls: 0,
     bytes: 0,
     until: Date.now() + EXPLORATION_MS,
+    expired() {
+      return Date.now() > this.until;
+    },
     exhausted() {
-      return this.calls >= MAX_TOOL_CALLS || this.bytes >= MAX_READ_BYTES || Date.now() > this.until;
+      return this.calls >= MAX_TOOL_CALLS || this.bytes >= MAX_READ_BYTES || this.expired();
     },
   };
+}
+
+// Decorator applied to every tool of this module: a call past the allowance is
+// refused before the tool runs, and counted otherwise. A tool added to
+// REPOSITORY_TOOLS gets the budget by construction, it cannot forget it.
+function budgeted(specs) {
+  return Object.fromEntries(
+    Object.entries(specs).map(([name, spec]) => [
+      name,
+      (context) => {
+        const built = spec(context);
+        return {
+          ...built,
+          callback: async (input) => {
+            if (context.budget.exhausted()) return BUDGET_SPENT;
+            context.budget.calls += 1;
+            return built.callback(input);
+          },
+        };
+      },
+    ])
+  );
 }
 
 // Second barrier behind tar's own: tar guards what gets written during
@@ -59,16 +84,13 @@ async function* walk(dir) {
   }
 }
 
-export const REPOSITORY_TOOLS = {
-  list_files: ({ root, budget }) => ({
+export const REPOSITORY_TOOLS = budgeted({
+  list_files: ({ root }) => ({
     description: "List the files and directories at a path inside the repository. Use '.' for the root.",
     inputSchema: z.object({
       path: z.string().optional().describe("Directory path relative to the repository root"),
     }),
     callback: async ({ path }) => {
-      if (budget.exhausted()) return BUDGET_SPENT;
-      budget.calls += 1;
-
       const target = inside(root, path);
       if (!target) return `Path '${path}' is outside the repository.`;
 
@@ -93,9 +115,6 @@ export const REPOSITORY_TOOLS = {
       path: z.string().describe("File path relative to the repository root"),
     }),
     callback: async ({ path }) => {
-      if (budget.exhausted()) return BUDGET_SPENT;
-      budget.calls += 1;
-
       const target = inside(root, path);
       if (!target) return `Path '${path}' is outside the repository.`;
 
@@ -123,9 +142,6 @@ export const REPOSITORY_TOOLS = {
       pattern: z.string().describe("Plain text, or alternatives separated by '|', e.g. 'jwt|token'"),
     }),
     callback: async ({ pattern }) => {
-      if (budget.exhausted()) return BUDGET_SPENT;
-      budget.calls += 1;
-
       if (pattern.length > MAX_PATTERN_LENGTH) return "That search pattern is too long.";
 
       // Literal matching, never a RegExp built from the model's pattern. A
@@ -141,7 +157,7 @@ export const REPOSITORY_TOOLS = {
       for await (const file of walk(root)) {
         // Checked per file rather than once up front: a search over a large tree
         // is the one call that can outlive the deadline on its own.
-        if (Date.now() > budget.until) break;
+        if (budget.expired()) break;
 
         const text = await readFile(file, "utf8").catch(() => null);
         if (text === null) continue;
@@ -150,7 +166,7 @@ export const REPOSITORY_TOOLS = {
         const lines = text.split("\n");
         for (let i = 0; i < lines.length; i += 1) {
           // Also checked per line: a single file can be long enough to matter.
-          if (Date.now() > budget.until) break;
+          if (budget.expired()) break;
 
           const line = lines[i].toLowerCase();
           if (!terms.some((term) => line.includes(term))) continue;
@@ -166,4 +182,4 @@ export const REPOSITORY_TOOLS = {
       return `${matches.join("\n")}${capped}`;
     },
   }),
-};
+});

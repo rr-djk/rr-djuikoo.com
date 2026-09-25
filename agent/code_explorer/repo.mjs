@@ -83,6 +83,16 @@ function isCode(entryPath) {
   return dot > 0 && CODE_EXTENSIONS.has(name.slice(dot));
 }
 
+// What a non-2xx archive response means for the branch loop. A 404 is the
+// branch missing, not the repository, so the next branch is tried.
+function classifyDownloadStatus(status) {
+  if (status === 404) return { retry: true };
+  if (status === 403 || status === 429) {
+    return { retry: false, message: "The source is momentarily unavailable, it can be tried again shortly." };
+  }
+  return { retry: false, message: `The repository could not be downloaded (HTTP ${status}).` };
+}
+
 async function download(owner, repo) {
   let lastStatus;
 
@@ -104,13 +114,11 @@ async function download(owner, repo) {
 
     response.body?.cancel();
     lastStatus = response.status;
-    if (response.status === 404) continue;
+    const outcome = classifyDownloadStatus(response.status);
+    if (outcome.retry) continue;
 
     console.error(`repo download refused for ${owner}/${repo}@${branch}: HTTP ${response.status}`);
-    if (response.status === 403 || response.status === 429) {
-      throw new RepoError("The source is momentarily unavailable, it can be tried again shortly.");
-    }
-    throw new RepoError(`The repository could not be downloaded (HTTP ${response.status}).`);
+    throw new RepoError(outcome.message);
   }
 
   // Every branch answered 404: the repository is private, renamed or gone. The
