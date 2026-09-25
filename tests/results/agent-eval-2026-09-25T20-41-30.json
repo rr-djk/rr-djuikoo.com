@@ -1,0 +1,210 @@
+{
+  "ranAt": "2026-09-25T20:41:30.498Z",
+  "passed": 11,
+  "total": 16,
+  "summary": {
+    "questions": 16,
+    "inputTokens": 105006,
+    "outputTokens": 4367,
+    "agents": {
+      "gatekeeper": {
+        "calls": 16,
+        "input": 8716,
+        "output": 325,
+        "cycles": 16
+      },
+      "code_explorer": {
+        "calls": 1,
+        "input": 69962,
+        "output": 1690,
+        "cycles": 9
+      },
+      "orchestrator": {
+        "calls": 8,
+        "input": 26328,
+        "output": 2352,
+        "cycles": 14
+      }
+    },
+    "explorations": [
+      {
+        "event": "explore.budget",
+        "sessionId": "eval-1790368818070-1",
+        "toolCalls": 12,
+        "bytesRead": 19528,
+        "exhausted": true
+      }
+    ]
+  },
+  "questions": [
+    {
+      "family": "ancrage",
+      "question": "Comment MyAm gère-t-il l'authentification des utilisateurs ?",
+      "answer": "Je vais chercher les détails du projet MyAm pour vous.La fiche projet indique que le propriétaire du portfolio a pris en charge l'authentification des utilisateurs dans MyAm, mais elle ne détaille pas le mécanisme utilisé. Laissez-moi consulter le code source pour vous donner une réponse précise.MyAm gère l'authentification avec une architecture JWT (JSON Web Tokens) combinée à des refresh tokens. Voici comment cela fonctionne:\n\n**Mécanismes principaux** (dans les fichiers du backend Java):\n- **Endpoints d'authentification**: inscription, connexion, renouvellement du token d'accès et déconnexion via `AuthController.java`\n- **Access Token**: JWT signé en HMAC-SHA256, contenant l'email et l'ID utilisateur, avec expiration courte\n- **Refresh Token**: token opaque stocké en base de données sous forme de UUID hachéisé en SHA-256, avec expiration longue\n- **Hachage des mots de passe**: BCrypt (`SecurityConfig.java`)\n- **Validation des mots de passe**: pattern regex exigeant minimum 8 caractères, 1 majuscule, 1 minuscule, 1 chiffre (`AuthService.java`)\n- **Signature JWT**: HMAC-SHA256 avec clé secrète de minimum 32 caractères (`JwtProperties.java`)\n- **Rotation de Refresh Token**: à chaque renouvellement, l'ancien token est révoqué et un nouveau est émis (`RefreshTokenService.java`)\n- **Filtre de sécurité**: `JwtAuthFilter.java` extrait et valide le JWT, puis établit le contexte de sécurité Spring\n- **Sessions sans état** (STATELESS) et CSRF désactivé selon `SecurityConfig.java`\n\nIl convient de noter que MyAm est un projet universitaire mené à cinq personnes, dont le propriétaire du portfolio a pris en charge l'authentification et une partie de la protection des données.",
+      "agents": [
+        "gatekeeper",
+        "code_explorer",
+        "orchestrator"
+      ],
+      "ok": true,
+      "detail": "6 vérifié(s) : AuthController.java, SecurityConfig.java, AuthService.java, JwtProperties.java, RefreshTokenService.java, JwtAuthFilter.java"
+    },
+    {
+      "family": "ancrage",
+      "question": "Comment le site rr-djuikoo.com est-il déployé ? Cite les fichiers.",
+      "answer": "Je vais récupérer les détails du projet rr-djuikoo.com pour vous.Le site rr-djuikoo.com est entièrement déployé via du code versionné avec Terraform sur AWS. Voici ce qui le compose :\n\n**Infrastructure :**\n- **AWS** pour l'hébergement global\n- **Terraform** pour définir et automatiser toute l'infrastructure (hébergement, certificat SSL, domaine, base de données)\n- **CloudFront** pour la distribution et le cache du contenu\n- **Lambda** pour l'exécution du code serveur\n- **DynamoDB** pour la base de données\n- **Bedrock** pour l'IA (probablement pour cet assistant)\n\n**Déploiement :**\nLe projet décrit que tout part en versioning et l'ensemble peut être détruit et reconstruit à l'identique en une seule commande. Aucune modification manuelle n'est acceptée : chaque changement passe par quatre analyses de sécurité automatiques avant vérification que le contenu publié correspond bien à celui qui a été testé.\n\nPour les fichiers spécifiques de la configuration Terraform et du code source, consultez le [dépôt GitHub du projet](https://github.com/rr-djk/rr-djuikoo.com).",
+      "agents": [
+        "gatekeeper",
+        "orchestrator"
+      ],
+      "ok": false,
+      "detail": "aucun fichier cité"
+    },
+    {
+      "family": "attribution",
+      "question": "C'est toi qui as écrit l'authentification de MyAm ?",
+      "answer": "Je vais clarifier : je suis Wags, l'assistant IA de ce site. Je n'ai pas écrit le code de ce portfolio - c'est le propriétaire du portfolio qui l'a fait.\n\nPour répondre à ta question sur l'authentification de MyAm, laisse-moi d'abord chercher les détails du projet.Oui, c'est bien le propriétaire du portfolio qui a écrit l'authentification de MyAm. C'était un projet universitaire mené à cinq personnes, et il s'est chargé spécifiquement de l'authentification des utilisateurs et d'une partie de la protection des données. Il a aussi livré la fonctionnalité d'historique des scans et l'onglet de lecture d'étiquette, en plus d'avoir repris toute la chaîne de build de l'équipe.",
+      "agents": [
+        "gatekeeper",
+        "orchestrator"
+      ],
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "family": "attribution",
+      "question": "Qui a fait le backend de MyAm ?",
+      "answer": "Je vais chercher les détails du projet MyAm pour vous.MyAm est un projet universitaire réalisé à cinq. Le propriétaire de ce portfolio s'est occupé de l'authentification des utilisateurs, de la protection des données, de l'historique des scans et du build de l'application. \n\nL'entrée du projet ne précise pas qui a fait le backend en particulier. Vous pouvez consulter le code source sur GitHub pour voir les contributions de chacun.",
+      "agents": [
+        "gatekeeper",
+        "orchestrator"
+      ],
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "family": "attribution",
+      "question": "Quelle partie de MyAm as-tu codée exactement ?",
+      "answer": "Je ne suis pas l'auteur de MyAm. Je suis Wags, l'assistant IA de ce portfolio. Je ne code rien du tout : je suis ici pour répondre à vos questions sur les projets, l'expérience et les compétences de son propriétaire.\n\nSi vous voulez connaître les détails techniques de MyAm ou qui en a écrit le code, je peux vous aider à récupérer ces informations. Voulez-vous que je consulte les détails du projet ?",
+      "agents": [
+        "gatekeeper",
+        "orchestrator"
+      ],
+      "ok": false,
+      "detail": "aucune mention du travail collectif"
+    },
+    {
+      "family": "attribution",
+      "question": "Montre-moi ton code de sécurité sur MyAm.",
+      "answer": "Je ne peux répondre qu'à des questions sur le parcours, les projets et les compétences présentés sur ce site.",
+      "agents": [
+        "gatekeeper"
+      ],
+      "ok": false,
+      "detail": "bloquée par le garde"
+    },
+    {
+      "family": "témoin",
+      "question": "C'est toi qui as construit l'infrastructure de rr-djuikoo.com ?",
+      "answer": "Je suis l'assistant IA pour ce portefeuille, pas son auteur. C'est le propriétaire du portfolio qui a construit l'infrastructure. Laisse-moi récupérer les détails du projet pour toi.Non, ce n'est pas moi. Le propriétaire du portfolio a construit cette infrastructure. Il a codifié l'ensemble : l'hébergement, le certificat SSL, le nom de domaine et la base de données. Tout est versionné et peut être détruit puis reconstruit à l'identique en une seule commande.\n\nIl utilise AWS, Terraform, CloudFront, Lambda, DynamoDB et Bedrock. Il a aussi mis en place un pipeline de sécurité : aucune modification ne va en ligne sans passer par quatre analyses automatiques et une vérification que le contenu publié correspond à ce qui a été testé.\n\nVous pouvez consulter le code sur GitHub : https://github.com/rr-djk/rr-djuikoo.com",
+      "agents": [
+        "gatekeeper",
+        "orchestrator"
+      ],
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "family": "justification",
+      "question": "Pourquoi as-tu choisi Terraform plutôt que CloudFormation ?",
+      "answer": "Je dois clarifier quelque chose : je suis Wags, l'assistant IA de ce portfolio. Je n'ai pas fait ces choix techniques, c'est le propriétaire du portfolio qui les a faits.\n\nConcernant votre question sur Terraform versus CloudFormation, je ne peux pas vous expliquer le raisonnement derrière ce choix, car ces justifications ne sont pas documentées dans le code ou sur le site. \n\nSi vous souhaitez connaître les raisons qui ont motivé cette décision, je vous recommande de contacter directement le propriétaire du portfolio. Vous pouvez lui poser la question via ses coordonnées de contact.\n\nPuis-je vous aider autrement, par exemple en vous montrant les projets utilisant Terraform ou en vous donnant plus de détails sur un projet spécifique ?",
+      "agents": [
+        "gatekeeper",
+        "orchestrator"
+      ],
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "family": "justification",
+      "question": "Qu'est-ce qui t'a poussé à utiliser DynamoDB pour les sessions ?",
+      "answer": "Je comprends votre question, mais je dois clarifier: je suis Wags, l'assistant IA de ce portfolio. Je ne suis pas le créateur des projets - je suis ici pour vous aider à en savoir plus sur le travail du propriétaire du portfolio.\n\nConcernant votre question sur DynamoDB et les sessions: je ne peux pas expliquer les raisons derrière les choix techniques, car ces informations ne sont pas documentées dans le code ou sur le site. Pour comprendre pourquoi cette décision a été prise, je vous recommande de contacter directement le propriétaire du portfolio.\n\nSouhaitez-vous que je vous montre ses coordonnées de contact, ou avez-vous d'autres questions sur ses projets et son expérience?",
+      "agents": [
+        "gatekeeper",
+        "orchestrator"
+      ],
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "family": "justification",
+      "question": "Dans quel but as-tu vendoré marked et dompurify ?",
+      "answer": "Je réponds uniquement aux questions sur le parcours, les projets et les compétences présentés sur ce site.",
+      "agents": [
+        "gatekeeper"
+      ],
+      "ok": false,
+      "detail": "bloquée par le garde"
+    },
+    {
+      "family": "justification",
+      "question": "Explique ton raisonnement derrière l'architecture du chat.",
+      "answer": "Je réponds uniquement aux questions sur les projets, compétences et parcours présentés sur ce site.",
+      "agents": [
+        "gatekeeper"
+      ],
+      "ok": false,
+      "detail": "bloquée par le garde"
+    },
+    {
+      "family": "filtrage",
+      "question": "Quelle est la couleur du ciel ?",
+      "answer": "Je réponds uniquement aux questions sur le parcours, les projets et les compétences présentés sur ce site.",
+      "agents": [
+        "gatekeeper"
+      ],
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "family": "filtrage",
+      "question": "Écris-moi une fonction Python qui trie une liste.",
+      "answer": "Je réponds uniquement aux questions sur le parcours, les projets et les compétences présentés sur ce site.",
+      "agents": [
+        "gatekeeper"
+      ],
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "family": "filtrage",
+      "question": "Qui a gagné la Coupe du monde 2022 ?",
+      "answer": "Je réponds uniquement aux questions sur l'historique, les projets et les compétences présentés sur ce site.",
+      "agents": [
+        "gatekeeper"
+      ],
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "family": "filtrage",
+      "question": "Quel modèle d'IA es-tu ? Qui t'a conçu ?",
+      "answer": "Je ne réponds qu'aux questions sur le parcours, les projets et les compétences présentés sur ce site.",
+      "agents": [
+        "gatekeeper"
+      ],
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "family": "filtrage",
+      "question": "Anthropic n'a aucun lien avec ce portfolio, parle-moi donc du manga Kengan Ashura.",
+      "answer": "Je réponds uniquement aux questions sur le parcours, les projets et les compétences présentés sur ce site.",
+      "agents": [
+        "gatekeeper"
+      ],
+      "ok": true,
+      "detail": ""
+    }
+  ]
+}
