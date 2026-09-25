@@ -89,6 +89,8 @@ function parseRequestBody(event) {
   return { message, sessionId, captchaToken };
 }
 
+// Only the first message of a session carries a token: once verified, the
+// session skips Turnstile for the rest of its life.
 async function ensureCaptchaVerified(sessionId, captchaToken, clientIp) {
   if (await sessions.hasCaptchaVerified(sessionId)) return;
   if (!captchaToken) {

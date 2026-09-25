@@ -1,3 +1,7 @@
+// Every DynamoDB access of the agent goes through here. The client is not
+// exported: the Lambda role only grants GetItem and UpdateItem on the sessions
+// table, so a PutItem written elsewhere would fail in production only.
+
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 
@@ -5,32 +9,30 @@ const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
   marshallOptions: { removeUndefinedValues: true },
 });
 
-const SESSIONS_TABLE = process.env.SESSIONS_TABLE;
-const RATE_LIMIT_TABLE = process.env.RATE_LIMIT_TABLE;
+const sessionsTable = () => process.env.SESSIONS_TABLE;
+const rateLimitTable = () => process.env.RATE_LIMIT_TABLE;
 
 function nowSeconds() {
   return Math.floor(Date.now() / 1000);
 }
 
 export const sessions = {
-  // Early check in DynamoDB so a session that already passed the captcha skips
-  // it before incurring LLM/Bedrock costs in loadHistory.
+  // With no table configured (local run), every session counts as verified.
   async hasCaptchaVerified(sessionId) {
-    if (!SESSIONS_TABLE) return true;
+    if (!sessionsTable()) return true;
     const res = await ddb.send(
-      new GetCommand({ TableName: SESSIONS_TABLE, Key: { sessionId } })
+      new GetCommand({ TableName: sessionsTable(), Key: { sessionId } })
     );
     return res.Item?.captchaVerified === true;
   },
 
-  // Uses UpdateCommand (upsert) so we don't overwrite the whole item:
-  // 1. Creates the session item if this is the user's first message.
-  // 2. Preserves captchaVerified when saveHistory updates the session later.
+  // An upsert, so the first message of a session creates the item. expiresAt
+  // is only set if absent: this write never moves an expiry already on the item.
   async markCaptchaVerified(sessionId) {
-    if (!SESSIONS_TABLE) return;
+    if (!sessionsTable()) return;
     await ddb.send(
       new UpdateCommand({
-        TableName: SESSIONS_TABLE,
+        TableName: sessionsTable(),
         Key: { sessionId },
         UpdateExpression:
           "SET captchaVerified = :true, expiresAt = if_not_exists(expiresAt, :ttl)",
@@ -44,18 +46,18 @@ export const sessions = {
 
   async loadHistory(sessionId) {
     const res = await ddb.send(
-      new GetCommand({ TableName: SESSIONS_TABLE, Key: { sessionId } })
+      new GetCommand({ TableName: sessionsTable(), Key: { sessionId } })
     );
     return res.Item?.messages ? JSON.parse(res.Item.messages) : [];
   },
 
   async saveHistory(sessionId, messages) {
-    // A merge, not a replace: index.mjs may have set captchaVerified on this
-    // same item before the orchestrator ever ran, and a PutCommand here would
-    // wipe it on every turn.
+    // A merge, not a replace: markCaptchaVerified may have set captchaVerified
+    // on this same item before the orchestrator ever ran, and a PutCommand here
+    // would wipe it on every turn.
     await ddb.send(
       new UpdateCommand({
-        TableName: SESSIONS_TABLE,
+        TableName: sessionsTable(),
         Key: { sessionId },
         UpdateExpression: "SET messages = :messages, expiresAt = :expiresAt",
         ExpressionAttributeValues: {
@@ -69,7 +71,7 @@ export const sessions = {
 
 export const rateLimit = {
   async check(clientIp, { windowSeconds, max }) {
-    if (!RATE_LIMIT_TABLE) return { allowed: true };
+    if (!rateLimitTable()) return { allowed: true };
 
     const now = nowSeconds();
     const windowEnd = now + windowSeconds;
@@ -81,7 +83,7 @@ export const rateLimit = {
 
     const res = await ddb.send(
       new UpdateCommand({
-        TableName: RATE_LIMIT_TABLE,
+        TableName: rateLimitTable(),
         Key: { ip: `${clientIp}#${windowNumber}` },
         UpdateExpression:
           "SET #count = if_not_exists(#count, :zero) + :inc, expiresAt = if_not_exists(expiresAt, :windowEnd)",
