@@ -56,33 +56,156 @@ input:focus-visible {
 }
 
 /* ==========================================================
-   LAYOUT — deux panneaux, 70% / 30%
+   LAYOUT — portfolio pleine largeur + chat en couche
    ========================================================== */
+/* The gutter stays reserved when .is-chat-open hides the scrollbar, so the
+   viewport width does not change: scroll-experience.js recomputes the
+   horizontal track on resize and would otherwise jump. */
+html { scrollbar-gutter: stable; }
+html.is-chat-open { overflow: hidden; }
+
 .page {
-  display: flex;
   min-height: 100vh;
   width: 100%;
 }
 
 .main-panel {
-  flex: 0 0 70%;
-  width: 70%;
+  width: 100%;
   max-width: none;
   padding: 64px 72px 48px;
 }
 
+.chat-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+/* Closed means invisible, never display:none: #turnstile-widget is rendered
+   once and must keep its iframe across open/close (only captcha.hide() in
+   main.js removes it). visibility:hidden also takes the closed window's
+   controls out of the Tab order; it flips once the fade-out has ended. */
 .chat-panel {
-  flex: 0 0 30%;
-  width: 30%;
-  min-width: 0;
-  background: var(--bg-chat);
-  border-left: 1px solid var(--chat-border);
+  position: fixed;
+  top: 50%;
+  right: 32px;
+  z-index: 61;
+  width: min(420px, calc(100vw - 32px));
+  height: min(620px, calc(100vh - 64px));
+  height: min(620px, calc(100dvh - 64px));
   display: flex;
   flex-direction: column;
-  position: sticky;
-  top: 0;
-  height: 100vh;
+  overflow: hidden;
+  background: var(--bg-chat);
+  border: 1px solid var(--chat-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25);
   color: var(--chat-text);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-50%) scale(0.96);
+  transform-origin: bottom right;
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0.2s;
+}
+
+.chat-panel.is-open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(-50%);
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s;
+}
+
+.chat-close {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  margin-left: auto;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--chat-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.chat-close:hover { background: var(--chat-accent-soft); }
+.chat-close svg { width: 18px; height: 18px; }
+
+.chat-bubble {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 50;
+  width: 60px;
+  height: 60px;
+  border: none;
+  border-radius: 50%;
+  background: var(--chat-accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+.chat-bubble:hover { background: #163d22; }
+.chat-bubble svg { width: 30px; height: 30px; }
+
+/* Pulsing halo. Stops once the chat has been opened (.was-opened): past that
+   point the visitor knows where Wags is. The global reduced-motion rule turns
+   it off too. */
+.chat-bubble::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--chat-accent);
+  opacity: 0.35;
+  z-index: -1;
+  animation: chat-bubble-pulse 2s ease-out infinite;
+}
+.chat-bubble.was-opened::before { animation: none; opacity: 0; }
+@keyframes chat-bubble-pulse {
+  to { transform: scale(1.6); opacity: 0; }
+}
+
+.chat-bubble-hint {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  right: 0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #1c1f22;
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+html.is-chat-open .chat-bubble { visibility: hidden; }
+
+@media (max-width: 560px) {
+  .chat-panel,
+  .chat-panel.is-open {
+    top: 0;
+    right: 0;
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    border: none;
+    border-radius: 0;
+  }
+  .chat-panel { transform: scale(0.96); }
+  .chat-panel.is-open { transform: none; }
+
+  .chat-bubble {
+    right: 16px;
+    bottom: 16px;
+  }
 }
 
 /* ==========================================================
@@ -126,8 +249,7 @@ input:focus-visible {
 
 .section-nav {
   display: flex;
-  /* Six labels plus their gaps overflow the panel below ~943px, so the links
-     have to wrap well before the stacked layout kicks in. */
+  /* Six labels plus their gaps overflow narrow screens, so the links wrap. */
   flex-wrap: wrap;
   gap: 12px 24px;
   padding: 16px 0;
@@ -144,13 +266,6 @@ input:focus-visible {
 .section-nav a:hover {
   color: var(--chat-accent);
   text-decoration: none;
-}
-
-/* Only useful once the chat panel is stacked below the content. Hidden here
-   rather than shown by a min-width query: the file uses max-width only, and
-   mixing both directions leaves a gap at fractional widths (900.5px). */
-.section-nav .nav-chat {
-  display: none;
 }
 
 .section {
@@ -423,7 +538,9 @@ html.has-horizontal-scroll .section:first-of-type {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 28px 24px 20px;
+  flex-shrink: 0;
+  padding: 16px 16px 16px 20px;
+  border-bottom: 1px solid var(--chat-border);
 }
 
 .chat-avatar {
@@ -570,7 +687,7 @@ html.has-horizontal-scroll .section:first-of-type {
 }
 
 .chat-message.agent pre {
-  /* A code block wider than the 30%-wide panel must scroll, not overflow it. */
+  /* A code block wider than the chat window must scroll, not overflow it. */
   overflow-x: auto;
   margin: 0 0 8px;
   /* Without a ground of its own a fenced block reads as an ordinary
@@ -587,8 +704,7 @@ html.has-horizontal-scroll .section:first-of-type {
 
 .chat-message.agent a {
   text-decoration: underline;
-  /* A long, unbroken URL otherwise pushes past the bubble, especially under
-     the 900px stacked layout. */
+  /* A long, unbroken URL otherwise pushes past the bubble. */
   word-break: break-word;
 }
 
@@ -703,52 +819,15 @@ html.has-horizontal-scroll .section:first-of-type {
 }
 
 /* ==========================================================
-   RESPONSIF — empilement vertical sous 900px
+   RESPONSIF — portfolio plus serré sous 900px
    ========================================================== */
-/* 900px is where the 30% chat column drops to 270px, roughly 28 characters per
-   bubble line. The literal cannot be a token: custom properties do not work
-   inside a media condition. This block sits last because a media query carries
-   no specificity bonus — it only wins on source order. */
+/* The chat layer sizes itself (see LAYOUT); this block only tightens the
+   portfolio. The literal cannot be a token: custom properties do not work
+   inside a media condition. It sits last because a media query carries no
+   specificity bonus — it only wins on source order. */
 @media (max-width: 900px) {
-  .page {
-    flex-direction: column;
-  }
-
-  /* flex: none is required, not cosmetic: in a column, the 70%/30% bases would
-     resolve against the height of .page, not its width. */
   .main-panel {
-    flex: none;
-    width: 100%;
     padding: 32px 20px 40px;
-  }
-
-  .chat-panel {
-    flex: none;
-    width: 100%;
-    position: static;
-    /* height must go back to auto: min-height only raises a fixed height, it
-       does not override it. Without a floor, .chat-body collapses to 0 — it is
-       flex-basis 0 with a non-visible overflow, so its automatic minimum is 0.
-       The dvh line is dropped whole by browsers that predate the unit, which
-       leaves the vh value in place. */
-    height: auto;
-    min-height: 50vh;
-    min-height: max(320px, 50dvh);
-    /* Without a ceiling the panel grows with the conversation, pushing the
-       input bar off screen and making main.js's scrollTop follow a no-op.
-       In landscape the floor above wins, which is the intended order. */
-    max-height: 70vh;
-    max-height: 70dvh;
-    border-left: none;
-    border-top: 3px solid #000;
-  }
-
-  /* Align the chat gutters on the main panel, or the text column visibly
-     shifts at the seam between the two panels. */
-  .chat-body,
-  .chat-input-bar {
-    padding-left: 20px;
-    padding-right: 20px;
   }
 
   .hero {
@@ -760,39 +839,12 @@ html.has-horizontal-scroll .section:first-of-type {
   }
 
   .section-nav {
-    /* The pill is taller than the plain links; without this they stretch to
-       its height and their text stays pinned to the top of the stretched box. */
-    align-items: center;
     gap: 10px 16px;
     margin-bottom: 28px;
-  }
-
-  /* Solid green marks the chat as a different kind of destination among the
-     section links. Same green as the send button, not the soft pill used for
-     the project tags. */
-  .section-nav .nav-chat {
-    display: block;
-    padding: 6px 14px;
-    border-radius: 999px;
-    color: #fff;
-    background: var(--chat-accent);
-  }
-
-  /* The shared .section-nav a:hover repaints the text in --chat-accent, which
-     would be invisible on this background. */
-  .section-nav .nav-chat:hover {
-    color: #fff;
-    background: #163d22;
   }
 
   .section {
     margin-bottom: 40px;
     padding-top: 28px;
-  }
-
-  /* Full-width panel: 88% alone would stretch a bubble to 750px between 561px
-     and 900px and erase the left/right conversation cue. */
-  .chat-message {
-    max-width: min(88%, 480px);
   }
 }
