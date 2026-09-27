@@ -43,7 +43,7 @@
 <div class="page">
 
   <!-- ============================================= -->
-  <!-- MAIN PANEL — 70%                              -->
+  <!-- MAIN PANEL                                    -->
   <!-- ============================================= -->
   <main class="main-panel">
 
@@ -59,7 +59,6 @@
       <a href="#experience">Expérience</a>
       <a href="#certifications">Certifications</a>
       <a href="#contact">Contact</a>
-      <a href="#chat-panel" class="nav-chat">Parler à Wags</a>
     </nav>
 
     <section id="about" class="section">
@@ -167,9 +166,33 @@
   </main>
 
   <!-- ============================================= -->
-  <!-- CHAT PANEL — 30%                              -->
+  <!-- CHAT — couche ouverte par #chat-bubble         -->
   <!-- ============================================= -->
-  <aside class="chat-panel" id="chat-panel" tabindex="-1" aria-label="Assistant conversationnel">
+  <div class="chat-backdrop" hidden></div>
+
+  <aside class="chat-panel" id="chat-panel" tabindex="-1" role="dialog" aria-modal="true" aria-label="Assistant conversationnel">
+
+    <header class="chat-header">
+      <div class="chat-avatar" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="4" y="8" width="16" height="13" rx="4" stroke="currentColor" stroke-width="1.4"/>
+          <line x1="12" y1="8" x2="12" y2="4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          <circle cx="12" cy="3" r="1.2" fill="currentColor"/>
+          <circle cx="9" cy="14.5" r="1" fill="currentColor"/>
+          <circle cx="15" cy="14.5" r="1" fill="currentColor"/>
+          <path d="M9.5 17.5C10.2 18.2 13.8 18.2 14.5 17.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="chat-header-text">
+        <h2>Wags</h2>
+        <p><span class="status-dot"></span>En ligne</p>
+      </div>
+      <button type="button" class="chat-close" aria-label="Fermer la conversation">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </header>
 
     <div class="chat-body" id="chat-body">
       <div class="chat-empty-state">
@@ -211,6 +234,26 @@
     </div>
 
   </aside>
+
+  <button
+    type="button"
+    id="chat-bubble"
+    class="chat-bubble"
+    aria-label="Discuter avec Wags"
+    aria-expanded="false"
+    aria-controls="chat-panel"
+  >
+    <!-- TODO(content): chat.bubbleHint -->
+    <span class="chat-bubble-hint" aria-hidden="true">{{ chat.bubbleHint }}</span>
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="4" y="8" width="16" height="13" rx="4" stroke="currentColor" stroke-width="1.4"/>
+      <line x1="12" y1="8" x2="12" y2="4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      <circle cx="12" cy="3" r="1.2" fill="currentColor"/>
+      <circle cx="9" cy="14.5" r="1" fill="currentColor"/>
+      <circle cx="15" cy="14.5" r="1" fill="currentColor"/>
+      <path d="M9.5 17.5C10.2 18.2 13.8 18.2 14.5 17.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+    </svg>
+  </button>
 
 </div>
 

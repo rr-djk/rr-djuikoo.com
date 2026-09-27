@@ -4,15 +4,18 @@
 
 import { marked } from "marked";
 import DOMPurify from "dompurify";
-
-// Public by design — a Turnstile site key carries no secret.
-const TURNSTILE_SITE_KEY = '0x4AAAAAAFBaTLxwAXT6SVZF';
+import { turnstileSiteKey } from "../config.mjs";
 
 const chatForm = document.getElementById('chat-form');
 const chatInput = document.getElementById('chat-input');
 const chatBody = document.getElementById('chat-body');
 const chatSubmitBtn = chatForm.querySelector('button[type="submit"]');
 const emptyState = document.querySelector('.chat-empty-state');
+const chatPanel = document.getElementById('chat-panel');
+const chatBubble = document.getElementById('chat-bubble');
+const chatBackdrop = document.querySelector('.chat-backdrop');
+const chatClose = document.querySelector('.chat-close');
+const mainPanel = document.querySelector('.main-panel');
 
 // `breaks: true` makes single newlines render as <br>, matching how the agent
 // actually formats its replies.
@@ -20,7 +23,7 @@ marked.use({ gfm: true, breaks: true });
 
 // Tags the agent's reply can legitimately use. `img` is deliberately absent:
 // the agent has no reason to emit one, and an inline image would blow past
-// the 30%-wide chat bubble.
+// the chat window.
 const ALLOWED_TAGS = [
   'p', 'br', 'strong', 'em', 'del', 'code', 'pre', 'hr', 'blockquote',
   'ul', 'ol', 'li', 'a', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
@@ -86,7 +89,7 @@ const captcha = {
 
   render() {
     this.widgetId = window.turnstile.render('#turnstile-widget', {
-      sitekey: TURNSTILE_SITE_KEY,
+      sitekey: turnstileSiteKey,
       action: 'chat_first_message',
       size: 'flexible',
       callback: (token) => this.onVerified(token),
@@ -131,6 +134,42 @@ const captcha = {
   },
 };
 
+// Whether the chat layer is shown over the portfolio. Purely a display toggle:
+// it never calls captcha.render()/hide()/reset(), so Turnstile's lifecycle
+// (owned by the captcha object above) is unaffected by opening or closing.
+let isChatOpen = false;
+
+function setChatOpen(open) {
+  isChatOpen = open;
+  chatPanel.classList.toggle('is-open', open);
+  chatBackdrop.hidden = !open;
+  document.documentElement.classList.toggle('is-chat-open', open);
+  chatBubble.setAttribute('aria-expanded', String(open));
+  // inert keeps keyboard focus inside the layer without a hand-written trap.
+  mainPanel.inert = open;
+  chatBubble.inert = open;
+}
+
+function openChat() {
+  setChatOpen(true);
+  chatBubble.classList.add('was-opened');
+  // While the captcha locks the input, the panel itself (tabindex="-1") is
+  // the only sensible target.
+  (chatInput.disabled ? chatPanel : chatInput).focus();
+}
+
+function closeChat() {
+  setChatOpen(false);
+  chatBubble.focus();
+}
+
+chatBubble.addEventListener('click', openChat);
+chatClose.addEventListener('click', closeChat);
+chatBackdrop.addEventListener('click', closeChat);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && isChatOpen) closeChat();
+});
+
 /**
  * Locks or unlocks the chat form while a reply is streaming, or while no
  * captcha token is available yet.
@@ -142,7 +181,9 @@ function setBusy(busy) {
   chatInput.disabled = locked;
   chatSubmitBtn.disabled = locked;
   chatInput.setAttribute('aria-busy', String(busy));
-  if (!locked) chatInput.focus();
+  // Only while the layer is shown: otherwise a captcha resolving in the
+  // background would yank focus into a field no one can see.
+  if (!locked && isChatOpen) chatInput.focus();
 }
 setBusy(false);
 
