@@ -3,6 +3,7 @@
   "private": true,
   "dependencies": {
     "dompurify": "3.4.15",
+    "gsap": "3.15.0",
     "marked": "18.0.12"
   },
   "scripts": {

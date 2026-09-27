@@ -4,6 +4,7 @@
 
 import { marked } from "marked";
 import DOMPurify from "dompurify";
+import "./scroll-experience.js";
 
 // Public by design — a Turnstile site key carries no secret.
 const TURNSTILE_SITE_KEY = '0x4AAAAAAFBaTLxwAXT6SVZF';
