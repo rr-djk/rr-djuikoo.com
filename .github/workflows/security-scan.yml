@@ -44,16 +44,16 @@ jobs:
         with:
           node-version: 22
 
-      # Trivy scans package-lock.json, but the browser runs site/js/vendor/.
-      # If a lockfile bump isn't followed by `npm run vendor`, Trivy reports
-      # a fixed version while the vendored bytes are still vulnerable. This
+      # Trivy scans package-lock.json, but the browser runs site/js/main.js.
+      # If a lockfile bump isn't followed by `npm run build:js`, Trivy reports
+      # a fixed version while the bundled bytes are still vulnerable. This
       # also catches Dependabot PRs, which bump the lockfile via the GitHub
-      # API and never trigger pre-commit, so the resync never happens.
-      - name: Verify vendor files alignment
+      # API and never trigger pre-commit, so the rebuild never happens.
+      - name: Verify JS bundle alignment
         run: |
           npm ci
-          npm run vendor
-          git diff --exit-code site/js/vendor/
+          npm run build:js
+          git diff --exit-code site/js/main.js
 
       # Gate: fails the job on HIGH/CRITICAL findings only. The SARIF
       # run below still reports every severity (LOW to CRITICAL), so

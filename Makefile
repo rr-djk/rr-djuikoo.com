@@ -7,11 +7,12 @@ SITE_DIR := site
 # Region the stack is deployed in; override to point the eval elsewhere.
 AWS_REGION ?= us-east-1
 
-.PHONY: build serve dev mock check eval agent-deps site-deps vendor plan apply
+.PHONY: build serve dev mock check eval agent-deps site-deps bundle-js plan apply
 
 ## --- Build & Local Development ---
-build:
+build: site-deps
 	node scripts/build-site.mjs
+	npm run build:js
 
 serve: build
 	python3 -m http.server 8000 --directory site/
@@ -29,8 +30,6 @@ mock: build
 	@echo "Mock site: http://localhost:8002/"
 	python3 mocks/server.py
 
-# 'marked' and 'dompurify' are declared as npm dependencies so Trivy can scan
-# them for CVEs, but the site loads them as plain <script> tags with no bundler.
 # This stamp follows the same pattern as agent/node_modules/.deps-stamp below.
 node_modules/.deps-stamp: package.json package-lock.json
 	npm ci
@@ -41,9 +40,11 @@ site-deps:
 		|| rm -f node_modules/.deps-stamp
 	@$(MAKE) --no-print-directory node_modules/.deps-stamp
 
-# Copy the browser builds of 'marked' and 'dompurify' into site/js/vendor
-vendor: site-deps
-	npm run vendor
+# Bundle site/js/main.js from src/js/ via esbuild-wasm (marked, dompurify, and
+# the hand-written app code all land in this one file). Separate target so the
+# bundle-js pre-commit hook and CI's alignment check can invoke it directly.
+bundle-js: site-deps
+	npm run build:js
 
 # AWS Lambda's nodejs22.x runtime lacks 'zod' and '@strands-agents/sdk', and AWS
 # won't install them at deploy time. We must package 'node_modules' inside the zip.
