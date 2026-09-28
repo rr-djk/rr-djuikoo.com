@@ -318,8 +318,11 @@ html.is-chat-open .chat-bubble { visibility: hidden; }
 }
 
 /* Sections listing items (projects, education...) are framed; the items keep
-   their own padding and their border-bottom runs from edge to edge. */
-.section-list {
+   their own padding and their border-bottom runs from edge to edge.
+   Plain-text sections (.section-text) share the frame but carry their own
+   padding, since they have no item children to carry it instead. */
+.section-list,
+.section-text {
   border: 1px solid var(--border);
   border-radius: 8px;
 }
@@ -327,6 +330,13 @@ html.is-chat-open .chat-bubble { visibility: hidden; }
 .section-list > .project-card,
 .section-list > .experience-item {
   padding: 20px 24px;
+}
+
+.section-text {
+  padding: 32px;
+}
+.section-text > :last-child {
+  margin-bottom: 0;
 }
 
 .section-title {
@@ -838,5 +848,9 @@ html.is-chat-open .chat-bubble { visibility: hidden; }
 
   .section {
     margin-bottom: 32px;
+  }
+
+  .section-text {
+    padding: 24px;
   }
 }
