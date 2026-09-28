@@ -603,19 +603,6 @@ html.is-chat-open .chat-bubble { visibility: hidden; }
   padding: 8px 0 24px;
 }
 
-.chat-empty-avatar {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: var(--chat-accent-soft);
-  color: var(--chat-accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 0 16px;
-}
-.chat-empty-avatar svg { width: 32px; height: 32px; }
-
 .chat-empty-state h3 {
   font-family: var(--font-display);
   font-size: 18px;
