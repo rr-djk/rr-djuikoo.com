@@ -278,8 +278,11 @@ html.is-chat-open .chat-bubble { visibility: hidden; }
    of the content; below, it stays a horizontal bar under the hero (see the
    max-width: 900px block). */
 @media (min-width: 901px) {
+  /* The empty space right of the content matches the nav column on its
+     left: 24px offset + 144px nav + 32px gap. */
   .main-panel {
-    padding-left: 256px;
+    padding-left: 200px;
+    padding-right: 200px;
   }
 
   /* z-index stays under the chat bubble (50) and the chat backdrop (60). */
@@ -288,7 +291,7 @@ html.is-chat-open .chat-bubble { visibility: hidden; }
     top: 180px;
     left: 24px;
     z-index: 40;
-    width: 200px;
+    width: 144px;
     flex-direction: column;
     /* Without it the links stretch and the focus outline spans the column. */
     align-items: flex-start;
@@ -307,11 +310,6 @@ html.is-chat-open .chat-bubble { visibility: hidden; }
   .section-nav a[aria-current="true"] {
     border-left-color: var(--chat-accent);
   }
-}
-
-.hero,
-.section {
-  max-width: 740px;
 }
 
 .section {
