@@ -5,6 +5,7 @@
 import { marked } from "marked";
 import DOMPurify from "dompurify";
 import { turnstileSiteKey } from "../config.mjs";
+import "./section-nav.js";
 
 const chatForm = document.getElementById('chat-form');
 const chatInput = document.getElementById('chat-input');
