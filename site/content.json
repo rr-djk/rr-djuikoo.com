@@ -25,6 +25,28 @@
   },
   "projects": [
     {
+      "name": "rr-djuikoo.com",
+      "descriptions": [
+        "Le site que vous lisez, et l'assistant qui l'accompagne : il répond en direct aux questions sur mon parcours, mes projets et mes compétences.",
+        "Tout ce qui le fait tourner, comme l'hébergement, le certificat, le nom de domaine et la base de données, est décrit dans du code versionné. Je peux détruire l'ensemble et le reconstruire à l'identique en une commande.",
+        "Rien ne part en ligne à la main : chaque modification passe par quatre analyses de sécurité automatiques, puis par une vérification que le contenu publié est bien celui qui a été testé."
+      ],
+      "tech": [
+        "AWS",
+        "Terraform",
+        "CloudFront",
+        "Lambda",
+        "DynamoDB",
+        "Bedrock"
+      ],
+      "links": [
+        {
+          "label": "Voir sur GitHub →",
+          "href": "https://github.com/rr-djk/rr-djuikoo.com"
+        }
+      ]
+    },
+    {
       "name": "MyAm",
       "descriptions": [
         "Application mobile qui déchiffre les étiquettes alimentaires : on scanne un produit, elle en extrait la composition et alerte sur les allergènes selon le profil de la personne, ses intolérances et son régime.",
@@ -48,44 +70,24 @@
       ]
     },
     {
-      "name": "rr-djuikoo.com",
+      "name": "TSP Solver",
       "descriptions": [
-        "Le site que vous lisez, et l'assistant qui l'accompagne : il répond en direct aux questions sur mon parcours, mes projets et mes compétences.",
-        "Tout ce qui le fait tourner, comme l'hébergement, le certificat, le nom de domaine et la base de données, est décrit dans du code versionné. Je peux détruire l'ensemble et le reconstruire à l'identique en une commande.",
-        "Rien ne part en ligne à la main : chaque modification passe par quatre analyses de sécurité automatiques, puis par une vérification que le contenu publié est bien celui qui a été testé."
+        "Programme qui cherche le trajet le plus court passant une seule fois par chaque ville d'une liste : le problème classique du voyageur de commerce. Trois méthodes de résolution (plus proche voisin, insertion la moins coûteuse, 2-opt) partagent une même interface, ce qui permet de les comparer ou d'en ajouter une sans toucher au reste.",
+        "Il s'utilise en ligne de commande, validée par 34 tests, rend ses résultats en JSON (coût, trajet, temps de calcul, statut) et tourne dans un conteneur sur tous les systèmes.",
+        "Le profilage a montré où partait le temps : en calculant une fois pour toutes la distance entre chaque paire de villes, le calcul sur 431 villes est passé de 197 à 32 secondes, soit 6,15 fois plus rapide. Répartir ensuite le travail sur 8 fils d'exécution, sans verrou, le rend encore 4,48 fois plus rapide.",
+        "Une suite de 70 tests couvre les méthodes de résolution, la lecture des fichiers de villes et le calcul en parallèle. L'usage de la mémoire est contrôlé avec Valgrind, et chaque approche est mesurée par des benchmarks."
       ],
       "tech": [
-        "AWS",
-        "Terraform",
-        "CloudFront",
-        "Lambda",
-        "DynamoDB",
-        "Bedrock"
+        "C++23",
+        "Google Test",
+        "Valgrind",
+        "Docker",
+        "GitHub Actions"
       ],
       "links": [
         {
           "label": "Voir sur GitHub →",
-          "href": "https://github.com/rr-djk/rr-djuikoo.com"
-        }
-      ]
-    },
-    {
-      "name": "GaugeInfra",
-      "descriptions": [
-        "Outil qui répond à une question qu'on se pose d'habitude trop tard : combien va coûter cette infrastructure une fois en ligne ? Il lit le code d'infrastructure et estime la facture mensuelle avant tout déploiement.",
-        "Les montants sont calculés par du code déterministe, à partir des tarifs publiés par AWS. L'intelligence artificielle n'intervient qu'ensuite, sur des chiffres déjà établis, pour commenter les compromis entre coût et robustesse.",
-        "Projet toujours en cours de développement : l'analyseur de code est terminé et couvert par 164 tests, le calcul des coûts est en chantier et l'interface reste à faire."
-      ],
-      "tech": [
-        "Python",
-        "Terraform",
-        "AWS",
-        "Bedrock"
-      ],
-      "links": [
-        {
-          "label": "Voir sur GitHub →",
-          "href": "https://github.com/rr-djk/GaugeInfra"
+          "href": "https://github.com/rr-djk/tsp_solver"
         }
       ]
     }

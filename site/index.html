@@ -80,6 +80,25 @@
       <div class="section-body section-list">
         <article class="project-card">
           <div class="project-card-header">
+            <h3>rr-djuikoo.com</h3>
+            <a href="https://github.com/rr-djk/rr-djuikoo.com" class="project-link" target="_blank" rel="noopener">Voir sur GitHub →</a>
+          </div>
+          <ul class="project-bullets">
+          <li>Le site que vous lisez, et l&#39;assistant qui l&#39;accompagne : il répond en direct aux questions sur mon parcours, mes projets et mes compétences.</li>
+          <li>Tout ce qui le fait tourner, comme l&#39;hébergement, le certificat, le nom de domaine et la base de données, est décrit dans du code versionné. Je peux détruire l&#39;ensemble et le reconstruire à l&#39;identique en une commande.</li>
+          <li>Rien ne part en ligne à la main : chaque modification passe par quatre analyses de sécurité automatiques, puis par une vérification que le contenu publié est bien celui qui a été testé.</li>
+          </ul>
+          <ul class="tag-list">
+            <li>AWS</li>
+            <li>Terraform</li>
+            <li>CloudFront</li>
+            <li>Lambda</li>
+            <li>DynamoDB</li>
+            <li>Bedrock</li>
+          </ul>
+        </article>
+        <article class="project-card">
+          <div class="project-card-header">
             <h3>MyAm</h3>
             <a href="https://github.com/MyAm-org/MyAm" class="project-link" target="_blank" rel="noopener">Voir sur GitHub →</a>
           </div>
@@ -100,38 +119,21 @@
         </article>
         <article class="project-card">
           <div class="project-card-header">
-            <h3>rr-djuikoo.com</h3>
-            <a href="https://github.com/rr-djk/rr-djuikoo.com" class="project-link" target="_blank" rel="noopener">Voir sur GitHub →</a>
+            <h3>TSP Solver</h3>
+            <a href="https://github.com/rr-djk/tsp_solver" class="project-link" target="_blank" rel="noopener">Voir sur GitHub →</a>
           </div>
           <ul class="project-bullets">
-          <li>Le site que vous lisez, et l&#39;assistant qui l&#39;accompagne : il répond en direct aux questions sur mon parcours, mes projets et mes compétences.</li>
-          <li>Tout ce qui le fait tourner, comme l&#39;hébergement, le certificat, le nom de domaine et la base de données, est décrit dans du code versionné. Je peux détruire l&#39;ensemble et le reconstruire à l&#39;identique en une commande.</li>
-          <li>Rien ne part en ligne à la main : chaque modification passe par quatre analyses de sécurité automatiques, puis par une vérification que le contenu publié est bien celui qui a été testé.</li>
+          <li>Programme qui cherche le trajet le plus court passant une seule fois par chaque ville d&#39;une liste : le problème classique du voyageur de commerce. Trois méthodes de résolution (plus proche voisin, insertion la moins coûteuse, 2-opt) partagent une même interface, ce qui permet de les comparer ou d&#39;en ajouter une sans toucher au reste.</li>
+          <li>Il s&#39;utilise en ligne de commande, validée par 34 tests, rend ses résultats en JSON (coût, trajet, temps de calcul, statut) et tourne dans un conteneur sur tous les systèmes.</li>
+          <li>Le profilage a montré où partait le temps : en calculant une fois pour toutes la distance entre chaque paire de villes, le calcul sur 431 villes est passé de 197 à 32 secondes, soit 6,15 fois plus rapide. Répartir ensuite le travail sur 8 fils d&#39;exécution, sans verrou, le rend encore 4,48 fois plus rapide.</li>
+          <li>Une suite de 70 tests couvre les méthodes de résolution, la lecture des fichiers de villes et le calcul en parallèle. L&#39;usage de la mémoire est contrôlé avec Valgrind, et chaque approche est mesurée par des benchmarks.</li>
           </ul>
           <ul class="tag-list">
-            <li>AWS</li>
-            <li>Terraform</li>
-            <li>CloudFront</li>
-            <li>Lambda</li>
-            <li>DynamoDB</li>
-            <li>Bedrock</li>
-          </ul>
-        </article>
-        <article class="project-card">
-          <div class="project-card-header">
-            <h3>GaugeInfra</h3>
-            <a href="https://github.com/rr-djk/GaugeInfra" class="project-link" target="_blank" rel="noopener">Voir sur GitHub →</a>
-          </div>
-          <ul class="project-bullets">
-          <li>Outil qui répond à une question qu&#39;on se pose d&#39;habitude trop tard : combien va coûter cette infrastructure une fois en ligne ? Il lit le code d&#39;infrastructure et estime la facture mensuelle avant tout déploiement.</li>
-          <li>Les montants sont calculés par du code déterministe, à partir des tarifs publiés par AWS. L&#39;intelligence artificielle n&#39;intervient qu&#39;ensuite, sur des chiffres déjà établis, pour commenter les compromis entre coût et robustesse.</li>
-          <li>Projet toujours en cours de développement : l&#39;analyseur de code est terminé et couvert par 164 tests, le calcul des coûts est en chantier et l&#39;interface reste à faire.</li>
-          </ul>
-          <ul class="tag-list">
-            <li>Python</li>
-            <li>Terraform</li>
-            <li>AWS</li>
-            <li>Bedrock</li>
+            <li>C++23</li>
+            <li>Google Test</li>
+            <li>Valgrind</li>
+            <li>Docker</li>
+            <li>GitHub Actions</li>
           </ul>
         </article>
       </div>
