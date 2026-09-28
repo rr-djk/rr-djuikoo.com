@@ -75,12 +75,13 @@ html.is-chat-open { overflow: hidden; }
   padding: 64px 72px 48px;
 }
 
-.chat-backdrop {
+.chat-backdrop,
+.section-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 60;
   background: rgba(0, 0, 0, 0.45);
 }
+.chat-backdrop { z-index: 60; }
 
 /* Closed means invisible, never display:none: #turnstile-widget is rendered
    once and must keep its iframe across open/close (only captcha.hide() in
@@ -313,7 +314,7 @@ html.has-horizontal-scroll .horizontal-track {
   height: 100%;
 }
 
-html.has-horizontal-scroll .section {
+html.has-horizontal-scroll .track-panel {
   flex: 0 0 100%;
   height: 100%;
   overflow-y: auto;
@@ -323,9 +324,192 @@ html.has-horizontal-scroll .section {
   border-left: 3px solid #000;
 }
 
-html.has-horizontal-scroll .section:first-of-type {
+html.has-horizontal-scroll .track-panel:first-child {
   padding-left: 0;
   border-left: none;
+}
+
+/* ==========================================================
+   ÉCRAN ORBITE — disposition statique (repli sans animation)
+   ========================================================== */
+.orbit-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  padding: 32px 0;
+}
+
+.orbit-core {
+  flex-shrink: 0;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: var(--chat-accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.orbit-cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+}
+
+.orbit-card {
+  width: 160px;
+  height: 160px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: #fff;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+.orbit-card:hover {
+  border-color: var(--chat-accent);
+  text-decoration: none;
+}
+
+/* Animated mode, switched on by orbit.js. Depth comes only from the scale it
+   computes: no `perspective` here, or it would be applied twice. The `html`
+   prefix outranks the .track-panel rule, whose overflow-y:auto would
+   otherwise add scrollbars around the cards. */
+html .orbit-stage.has-orbit {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  cursor: grab;
+  user-select: none;
+  touch-action: pan-y;
+}
+html .orbit-stage.has-orbit:active { cursor: grabbing; }
+
+.orbit-stage.has-orbit .orbit-core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  margin: -100px 0 0 -100px;
+  z-index: 50;
+}
+
+.orbit-stage.has-orbit .orbit-card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 300px;
+  height: 300px;
+  margin: -150px 0 0 -150px;
+  font-size: 32px;
+  will-change: transform, filter;
+  -webkit-user-drag: none;
+}
+
+/* Darkens far cards; opacity driven per frame through --card-shade. */
+.orbit-stage.has-orbit .orbit-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: #000;
+  opacity: var(--card-shade, 0);
+  pointer-events: none;
+}
+
+/* ==========================================================
+   FENÊTRE DE SECTION — pop-up piloté par section-viewer.js.
+   Sans html.has-section-viewer (pas de JS), les sections restent
+   empilées sous l'orbite et les ancres y mènent directement.
+   Couches : voile 44, fenêtre 45, sous la bulle Wags (50) et
+   sous la couche du chat (60/61).
+   ========================================================== */
+html:not(.has-section-viewer) .viewer-close { display: none; }
+
+.section-backdrop { z-index: 44; }
+
+html.has-section-viewer .section-viewer {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 45;
+  width: min(760px, calc(100vw - 32px));
+  max-height: min(80vh, calc(100vh - 64px));
+  max-height: min(80dvh, calc(100dvh - 64px));
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-main);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25);
+  transform: translate(-50%, -50%);
+}
+html.has-section-viewer .section-viewer.is-open { display: flex; }
+html.is-viewer-open { overflow: hidden; }
+html.is-viewer-open .scroll-progress { display: none; }
+
+.viewer-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 1;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.viewer-close:hover { background: var(--chat-accent-soft); }
+.viewer-close svg { width: 18px; height: 18px; }
+
+html.has-section-viewer .viewer-content {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 28px 40px 36px;
+}
+
+/* Keeps the title clear of the close button in the top-right corner. */
+html.has-section-viewer .section-viewer .section-title { padding-right: 44px; }
+
+html.has-section-viewer .section-viewer .section {
+  margin-bottom: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+@media (max-width: 560px) {
+  html.has-section-viewer .section-viewer {
+    top: 0;
+    left: 0;
+    width: 100%;
+    max-height: none;
+    height: 100vh;
+    height: 100dvh;
+    border: none;
+    border-radius: 0;
+    transform: none;
+  }
+
+  html.has-section-viewer .viewer-content { padding: 24px 20px 40px; }
 }
 
 .section-title {

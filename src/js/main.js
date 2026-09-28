@@ -5,6 +5,8 @@
 import { marked } from "marked";
 import DOMPurify from "dompurify";
 import "./scroll-experience.js";
+import { createSectionViewer } from "./section-viewer.js";
+import { createOrbit } from "./orbit.js";
 import { turnstileSiteKey } from "../config.mjs";
 
 const chatForm = document.getElementById('chat-form');
@@ -366,4 +368,28 @@ chatForm.addEventListener('submit', async (e) => {
   } finally {
     setBusy(false);
   }
+});
+
+// ==========================================================
+// PORTFOLIO SECTIONS — nav links and orbit cards open the viewer
+// ==========================================================
+
+const sectionViewer = createSectionViewer({
+  viewerElement: document.getElementById('section-viewer'),
+  isCoveredByChat: () => isChatOpen,
+});
+
+document.querySelectorAll('.section-nav [data-opens-section]').forEach((navLink) => {
+  navLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    sectionViewer.open(navLink.dataset.opensSection);
+  });
+});
+
+// The orbit wires its own cards: it must tell a drag from a click.
+createOrbit({
+  stageElement: document.getElementById('orbit'),
+  cardElements: [...document.querySelectorAll('.orbit-card')],
+  onCardSelected: sectionViewer.open,
+  isCovered: () => sectionViewer.isOpen() || isChatOpen,
 });

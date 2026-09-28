@@ -54,11 +54,11 @@
 
     <nav class="section-nav" aria-label="Navigation des sections">
       <a href="#about">À propos</a>
-      <a href="#projects">Projets</a>
-      <a href="#education">Études</a>
-      <a href="#experience">Expérience</a>
-      <a href="#certifications">Certifications</a>
-      <a href="#contact">Contact</a>
+      <a href="#projects" data-opens-section="projects">Projets</a>
+      <a href="#education" data-opens-section="education">Études</a>
+      <a href="#experience" data-opens-section="experience">Expérience</a>
+      <a href="#certifications" data-opens-section="certifications">Certifications</a>
+      <a href="#contact" data-opens-section="contact">Contact</a>
     </nav>
 
     <div class="scroll-progress" aria-hidden="true"></div>
@@ -66,7 +66,7 @@
     <div class="horizontal-wrapper">
     <div class="horizontal-track">
 
-    <section id="about" class="section">
+    <section id="about" class="section track-panel">
       <h2 class="section-title">À propos</h2>
       <div class="section-body">
         <!-- TODO(content): about.paragraphs[] -->
@@ -76,8 +76,33 @@
       </div>
     </section>
 
+    <div id="orbit" class="orbit-stage track-panel" role="region" aria-label="Sections du portfolio">
+      <div class="orbit-core" aria-hidden="true">Drag to orbit</div>
+      <div class="orbit-cards">
+        <a class="orbit-card" href="#projects" data-opens-section="projects">Projets</a>
+        <a class="orbit-card" href="#education" data-opens-section="education">Études</a>
+        <a class="orbit-card" href="#experience" data-opens-section="experience">Expérience</a>
+        <a class="orbit-card" href="#certifications" data-opens-section="certifications">Certifications</a>
+        <a class="orbit-card" href="#contact" data-opens-section="contact">Contact</a>
+      </div>
+    </div>
+
+    </div>
+    </div>
+
+    <!-- Without JS this renders as the plain stacked sections the anchors above
+         jump to; section-viewer.js turns it into a pop-up window. -->
+    <div class="section-backdrop" hidden></div>
+    <div class="section-viewer" id="section-viewer" role="dialog" aria-modal="true" aria-label="Section du portfolio">
+      <button type="button" class="viewer-close" aria-label="Fermer la section">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <div class="viewer-content">
+
     <section id="projects" class="section">
-      <h2 class="section-title">Projets</h2>
+      <h2 class="section-title" tabindex="-1">Projets</h2>
       <div class="section-body">
         <!-- TODO(content): projects[] — one .project-card per entry -->
         <template data-each="projects">
@@ -104,7 +129,7 @@
     </section>
 
     <section id="education" class="section">
-      <h2 class="section-title">Études</h2>
+      <h2 class="section-title" tabindex="-1">Études</h2>
       <div class="section-body">
         <!-- TODO(content): education[] — one .experience-item per entry -->
         <template data-each="education">
@@ -120,7 +145,7 @@
     </section>
 
     <section id="experience" class="section">
-      <h2 class="section-title">Expérience</h2>
+      <h2 class="section-title" tabindex="-1">Expérience</h2>
       <div class="section-body">
         <!-- TODO(content): experience[] — one .experience-item per entry -->
         <template data-each="experience">
@@ -141,7 +166,7 @@
     </section>
 
     <section id="certifications" class="section">
-      <h2 class="section-title">Certifications</h2>
+      <h2 class="section-title" tabindex="-1">Certifications</h2>
       <div class="section-body">
         <!-- TODO(content): certifications[] — reuses .experience-item, like Études,
              so the link lines up exactly where the dates do. -->
@@ -158,7 +183,7 @@
     </section>
 
     <section id="contact" class="section">
-      <h2 class="section-title">Contact</h2>
+      <h2 class="section-title" tabindex="-1">Contact</h2>
       <div class="section-body">
         <ul class="contact-bullets">
           <template data-each="contact.items">
@@ -168,7 +193,7 @@
       </div>
     </section>
 
-    </div>
+      </div>
     </div>
 
   </main>
