@@ -40,8 +40,8 @@ repos:
     hooks:
       - id: gitleaks
 
-  # Generated site artefacts: rebuilt from src/, and vendored deps
-  # resynced from package-lock.json.
+  # Generated site artefacts: HTML rebuilt from src/, JS bundle rebuilt from
+  # src/js/ and package-lock.json.
   - repo: local
     hooks:
       - id: build-site
@@ -49,10 +49,10 @@ repos:
         entry: node scripts/build-site.mjs
         language: system
         pass_filenames: false
-        files: ^(src/|scripts/build-site\.mjs$|site/index\.html$|site/content\.json$)
-      - id: vendor-deps
-        name: resync site/js/vendor from package-lock.json
-        entry: make vendor
+        files: ^(src/index\.template\.html$|src/profile\.mjs$|scripts/build-site\.mjs$|site/index\.html$|site/content\.json$)
+      - id: bundle-js
+        name: rebuild site/js/main.js bundle
+        entry: make bundle-js
         language: system
         pass_filenames: false
-        files: ^(package\.json|package-lock\.json|site/js/vendor/)
+        files: ^(package\.json|package-lock\.json|src/js/)

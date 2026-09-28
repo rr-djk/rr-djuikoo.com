@@ -128,5 +128,6 @@ export default {
     question: "Questions sur le parcours, les projets ou les compétences de mon employeur ?",
     answer: "Je te réponds directement, clairement.",
     placeholder: "Pose ta question à Wags",
+    bubbleHint: "Besoin d'aide ?",
   },
 };
