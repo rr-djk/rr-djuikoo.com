@@ -68,13 +68,25 @@ L'infrastructure AWS (fichiers `.tf` sous `terraform/`) est appliquée exclusive
 
    _(Adaptez `--name` si vous personnalisez `turnstile_secret_param_name`, par exemple `/mon-app/turnstile-secret`)._
 
+3. **Clés Langfuse** : Les traces des agents sont envoyées à Langfuse Cloud. Créez un projet sur [langfuse.com](https://langfuse.com/docs/observability/get-started) pour obtenir la clé publique (`pk-lf-...`) et la clé secrète (`sk-lf-...`). Comme pour Turnstile, elles ne transitent jamais dans Terraform ni dans `terraform.tfstate` : créez-les manuellement dans AWS SSM Parameter Store, au format JSON, avant le déploiement :
+
+   ```bash
+   aws ssm put-parameter \
+     --name "/rr-djuikoo/langfuse-keys" \
+     --value '{"publicKey":"pk-lf-...","secretKey":"sk-lf-..."}' \
+     --type "SecureString" \
+     --overwrite
+   ```
+
+   _(Adaptez `--name` si vous personnalisez `langfuse_keys_param_name`.)_ L'URL de la région du projet se règle avec `TF_VAR_langfuse_base_url` dans `.env` (`https://cloud.langfuse.com` pour l'UE, `https://us.cloud.langfuse.com` pour les États-Unis) : elle doit correspondre à la région où le projet a été créé, sinon Langfuse refuse les clés (erreur 401).
+
 ### Déploiement
 
 ```bash
 cp .env.example .env
-# Modifier .env avec votre adresse d'alerte budgétaire
+# Modifier .env avec votre adresse d'alerte budgétaire et l'URL de votre région Langfuse
 source .env && make plan   # installe agent/node_modules, valide l'empreinte et génère le plan Terraform (tfplan)
 source .env && make apply  # applique le plan validé
 ```
 
-Le processus de déploiement garantit que le paquet Lambda (`agent.zip`) embarque l'ensemble de ses dépendances d'exécution de l'agent (`node_modules` incluant `@strands-agents/sdk`, `zod` et `tar`) avant toute mise à jour du code. Le fichier `agent/node_modules/.deps-stamp` contient l'empreinte SHA-256 du fichier `agent/package-lock.json` ; une précondition dans `lambda.tf` interrompt la génération du plan si les dépendances ne sont pas installées ou ne sont pas à jour.
+Le processus de déploiement garantit que le paquet Lambda (`agent.zip`) embarque l'ensemble de ses dépendances d'exécution de l'agent (`node_modules` incluant `@strands-agents/sdk`, `@opentelemetry/*`, `zod` et `tar`) avant toute mise à jour du code. Le fichier `agent/node_modules/.deps-stamp` contient l'empreinte SHA-256 du fichier `agent/package-lock.json` ; une précondition dans `lambda.tf` interrompt la génération du plan si les dépendances ne sont pas installées ou ne sont pas à jour.

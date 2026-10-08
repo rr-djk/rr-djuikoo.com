@@ -17,9 +17,10 @@ Browser
   ├── CloudFront → S3 → Site statique
   └── /api/chat → Lambda (Response Stream)
                    ├── DynamoDB (Sessions & Rate Limit)
-                   ├── SSM Parameter Store (Secret Turnstile)
+                   ├── SSM Parameter Store (Secret Turnstile, clés Langfuse)
                    ├── Cloudflare Siteverify (Validation 1er message)
                    ├── S3 (content.json - Cache TTL 5 min)
+                   ├── Langfuse Cloud (Traces des agents)
                    └── Multi-Agent Strands (Claude Haiku 4.5)
                         ├── Gatekeeper (Filtre hors-sujet)
                         ├── Orchestrateur Wags (8 outils)
@@ -53,7 +54,7 @@ Pour gérer l'infrastructure Terraform, créez d'abord votre fichier d'environne
 
 ```bash
 cp .env.example .env
-# Éditez .env pour spécifier votre adresse email d'alerte budgétaire
+# Éditez .env pour spécifier votre adresse email d'alerte budgétaire et l'URL de votre région Langfuse
 ```
 
 Provisionnez ensuite le secret Cloudflare Turnstile dans AWS SSM Parameter Store. Une étape manuelle unique et indépendante de `.env`, puisque ce secret ne doit jamais transiter par Terraform (voir [docs/infrastructure.md](docs/infrastructure.md)). Consultez la [documentation Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/get-started/) pour générer les clés, puis exécutez directement dans votre terminal :
@@ -67,6 +68,16 @@ aws ssm put-parameter \
 ```
 
 Cloudflare n'affiche cette clé secrète qu'une seule fois, à sa création : une fois la commande exécutée, elle ne vivra que dans SSM.
+
+Faites de même pour les clés Langfuse, qui alimentent le traçage des agents (voir [docs/deployment.md](docs/deployment.md)). Consultez la [documentation Langfuse](https://langfuse.com/docs) pour créer le projet et générer les clés, puis exécutez :
+
+```bash
+aws ssm put-parameter \
+  --name "/rr-djuikoo/langfuse-keys" \
+  --value '{"publicKey":"pk-lf-...","secretKey":"sk-lf-..."}' \
+  --type "SecureString" \
+  --overwrite
+```
 
 Lancez enfin le plan et l'application Terraform :
 
