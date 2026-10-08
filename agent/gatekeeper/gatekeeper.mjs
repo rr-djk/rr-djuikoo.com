@@ -33,6 +33,7 @@ export async function refusalFor(message, sessionId, content) {
     model,
     systemPrompt: gatekeeperPrompt(content),
     printer: false,
+    traceAttributes: { "langfuse.session.id": sessionId },
   });
 
   let result;

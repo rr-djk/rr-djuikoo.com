@@ -52,6 +52,7 @@ export async function* answerWith(message, sessionId) {
         // right conversation.
         tools: toolbox.forAgent(AGENT_NAME, { content, sessionId, exploreRepo }),
         printer: false,
+        traceAttributes: { "langfuse.session.id": sessionId },
     });
 
     // stream() returns the AgentResult as the generator's return value, which a

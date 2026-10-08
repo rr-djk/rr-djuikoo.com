@@ -30,6 +30,7 @@ export async function exploreRepo(root, question, sessionId) {
     systemPrompt: CODE_EXPLORER_PROMPT,
     tools: toolbox.forAgent(AGENT_NAME, { root, budget }),
     printer: false,
+    traceAttributes: { "langfuse.session.id": sessionId },
   });
 
   const result = await agent.invoke(question);
