@@ -76,10 +76,10 @@ Browser (Rendu Markdown & Animation is-waiting)
 
 1. **Envoi de la demande** : Le navigateur génère un `sessionId` unique et envoie une requête HTTP POST `/api/chat` contenant le message, le `sessionId`, le champ `captchaToken` (présent dans chaque requête, mais qui n'a d'effet que pour le premier message d'une session) et le hachage SHA-256 du corps (`X-Amz-Content-Sha256`).
 2. **Acheminement sécurisé** : CloudFront intercepte l'appel sous `/api/*` et le redirige vers la Lambda URL. La signature SigV4 est appliquée par CloudFront via Origin Access Control (OAC).
-3. **Contrôle de débit, validation du captcha & chargement du contenu** : La Lambda (`agent/index.mjs`) vérifie les limites de débit dans DynamoDB (`RATE_LIMIT_TABLE`, max 20 requêtes / 10 min par IP). Sur le premier message de la session, la Lambda valide le jeton Turnstile (`agent/captcha.mjs`) auprès de l'API Cloudflare Siteverify à l'aide du secret lu dans SSM (`TURNSTILE_SECRET_PARAM`). La vérification contrôle l'action (`chat_first_message`), le nom d'hôte (`rr-djuikoo.com`) et enregistre `captchaVerified: true` dans DynamoDB via `UpdateCommand`. En cas de panne de Cloudflare, la validation applique le principe _fail-open_ pour ne pas bloquer les utilisateurs. Les messages suivants de la session sont dispensés de captcha. L'IP est lue dans `cloudfront-viewer-address`, écrit par CloudFront, et le numéro de la tranche de 10 minutes fait partie de la clé. Un `sessionId` non conforme à UUID v4 est rejeté (`INVALID_SESSION`) avant tout appel Bedrock. Le fichier `content.json` est chargé de façon synchrone afin de fournir les noms de projets au filtre. Un temporisateur émet un ping NDJSON (`{"type":"ping"}`) toutes les 10 secondes pour maintenir la connexion CloudFront active pendant les opérations longues.
+3. **Contrôle de débit, validation du captcha & chargement du contenu** : La Lambda (`agent/index.mjs`) vérifie les limites de débit dans DynamoDB (`RATE_LIMIT_TABLE`, max 20 requêtes / 10 min par IP). Sur le premier message de la session, la Lambda valide le jeton Turnstile (`agent/captcha.mjs`) auprès de l'API Cloudflare Siteverify à l'aide du secret lu dans SSM (`TURNSTILE_SECRET_PARAM`). La vérification contrôle l'action (`chat_first_message`), le nom d'hôte (`rr-djuikoo.com`) et enregistre `captchaVerified: true` dans DynamoDB via `UpdateCommand`. En cas de panne de Cloudflare, la validation applique le principe _fail-open_ pour ne pas bloquer les utilisateurs. Les messages suivants de la session sont dispensés de captcha. L'IP est lue dans `cloudfront-viewer-address`, écrit par CloudFront, et le numéro de la tranche de 10 minutes fait partie de la clé. Un `sessionId` non conforme à UUID v4 est rejeté (`INVALID_SESSION`) avant tout appel Bedrock. Le fichier `content.json` est chargé de façon synchrone afin de fournir les noms de projets au filtre. Un temporisateur émet un ping NDJSON (`{"type":"ping"}`) toutes les 10 secondes pour maintenir la connexion CloudFront active pendant les opérations longues. La requête est ensuite exécutée dans un span racine `chat.request` (`agent/telemetry.mjs`) : les trois agents apparaissent ainsi dans une seule trace Langfuse.
 4. **Filtrage de garde (Gatekeeper)** : Le message passe par l'agent `Gatekeeper` auquel le contenu du profil est transmis. S'il s'agit d'une question hors-sujet, il génère une réponse de refus directe dans la langue du visiteur.
 5. **Orchestration & Outils (Wags)** : Si la question est légitime, l'Orchestrateur Wags prend le relais. Il consulte le profil, répond aux questions sur le parcours ou délègue les questions techniques approfondies au sous-agent `Code Explorer`.
-6. **Réponse en streaming** : Les tokens générés sont transmis au navigateur au format NDJSON (`type: token`, `type: ping`, `type: done` ou `type: error`).
+6. **Réponse en streaming** : Les tokens générés sont transmis au navigateur au format NDJSON (`type: token`, `type: ping`, `type: done` ou `type: error`). Après `done`, la Lambda attend au plus 2 secondes l'envoi des traces à Langfuse avant de fermer le flux : une Lambda se fige dès la fin de la réponse et perdrait sinon les traces en attente.
 
 ## Composants du système
 
@@ -176,6 +176,14 @@ Exécuté dans AWS Lambda Node.js 22 (`arm64`), le runtime repose sur le SDK `@s
 - **Confidentialité** : Les textes des questions/réponses sont strictement exclus des journaux CloudWatch.
 - **Analytique** : Alimente le tableau de bord CloudWatch (`terraform/monitoring.tf`) ventilé par agent.
 
+#### 5. Traçage Langfuse (`agent/telemetry.mjs`)
+
+- **Principe** : Strands émet déjà des spans OpenTelemetry (invocation d'agent, appel au modèle, appel d'outil, tokens). `telemetry.mjs` les exporte en OTLP/HTTP vers `LANGFUSE_BASE_URL` avec une authentification Basic construite depuis les clés lues dans SSM (`LANGFUSE_KEYS_PARAM`, JSON `{"publicKey", "secretKey"}`), sans SDK Langfuse.
+- **Une trace par message** : `traceChatRequest` ouvre le span racine `chat.request`, dont l'entrée est le message du visiteur et la sortie la réponse. Chaque agent reçoit `traceAttributes: { "langfuse.session.id": sessionId }` pour regrouper les traces d'une conversation.
+- **Fail-open** : `startTelemetry()` ne lève jamais d'erreur. Si les clés sont illisibles, le traçage est désactivé pour la durée de vie du conteneur (`telemetry disabled` dans CloudWatch) et le chat répond normalement.
+- **Contenu envoyé** : texte complet des échanges, sans masquage (voir `SECURITY.md`). `chat.usage` reste la source du tableau de bord CloudWatch.
+- **Hors périmètre** : `make eval` appelle `answerWith` sans passer par `index.mjs`, donc ne démarre pas le traçage et ne produit aucune trace.
+
 ### Infrastructure AWS
 
 - **Région** : `us-east-1`
@@ -184,4 +192,5 @@ Exécuté dans AWS Lambda Node.js 22 (`arm64`), le runtime repose sur le SDK `@s
 - **Calcul** : AWS Lambda Node.js 22 (`arm64`, 512 Mo, timeout 90s, `RESPONSE_STREAM`).
 - **Base de données** : Amazon DynamoDB (Tables de sessions et de rate limit).
 - **Intelligence Artificielle** : Amazon Bedrock (Claude Haiku 4.5).
+- **Observabilité des agents** : Langfuse Cloud (traces OpenTelemetry), clés dans SSM Parameter Store.
 - **Supervision & Budget** : Dashboard CloudWatch et budget mensuel Bedrock (20 USD) avec alertes par email (`TF_VAR_budget_alert_email`).

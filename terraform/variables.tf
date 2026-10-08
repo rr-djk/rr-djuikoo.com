@@ -49,6 +49,20 @@ variable "turnstile_secret_param_name" {
   default     = "/rr-djuikoo/turnstile-secret-key"
 }
 
+# Name only, never the value: same out-of-band creation as the Turnstile secret.
+# The value is JSON: {"publicKey": "pk-lf-...", "secretKey": "sk-lf-..."}.
+variable "langfuse_keys_param_name" {
+  description = "Name of the SSM SecureString parameter holding the Langfuse API keys."
+  type        = string
+  default     = "/rr-djuikoo/langfuse-keys"
+}
+
+variable "langfuse_base_url" {
+  description = "Langfuse Cloud base URL of the project's data region (EU or US)."
+  type        = string
+  default     = "https://cloud.langfuse.com"
+}
+
 variable "domain_name" {
   description = "Root domain name for the site (used for ACM and Route53)."
   type        = string

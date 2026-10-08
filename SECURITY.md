@@ -61,6 +61,10 @@ Le workflow `.github/workflows/security-scan.yml` s'exécute sur chaque pull req
 - **Filtrage de périmètre et Confidentialité des Journaux** :
   - Le _Gatekeeper_ évalue chaque message de façon isolée (sans historique) pour refuser les questions hors-sujet avant tout chargement de session, fermant ainsi la contournement par étapes multi-tours. Conçu selon un principe _fail-open_, en cas d'erreur du screener, il laisse passer le message vers l'Orchestrateur.
   - Les métriques de consommation émettent des journaux d'usage (`chat.usage`) contenant uniquement des compteurs de tokens, les noms d'agents et le `sessionId`. **Aucun texte de conversation (saisie utilisateur ou réponse agent) n'est consigné dans les logs CloudWatch**. La rétention des logs est fixée à 60 jours.
+- **Traçage vers Langfuse (service tiers)** :
+  - Les traces des agents sont envoyées à Langfuse Cloud (`agent/telemetry.mjs`). Elles contiennent le texte des conversations (questions, réponses, prompts des agents) et les entrées et résultats des outils, y compris les extraits de code lus par le _Code Explorer_. **Aucun masquage n'est appliqué** : le site ne collecte aucune donnée personnelle, mais ce qu'un visiteur écrit dans le chat part chez ce tiers.
+  - Les clés d'API Langfuse sont stockées dans AWS SSM (`SecureString`), créées hors Terraform comme le secret Turnstile, et lues par la Lambda avec une permission `ssm:GetParameter` limitée à ce seul paramètre. Elles ne figurent ni dans le dépôt ni dans `terraform.tfstate`.
+  - Le traçage est _fail-open_ : si les clés sont illisibles ou si Langfuse est indisponible, le chat répond normalement sans être tracé.
 
 ## Exceptions de sécurité
 

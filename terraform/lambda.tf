@@ -62,6 +62,8 @@ resource "aws_lambda_function" "chat" {
       CONTENT_BUCKET         = var.site_bucket_name
       CONTENT_KEY            = "content.json"
       TURNSTILE_SECRET_PARAM = var.turnstile_secret_param_name
+      LANGFUSE_KEYS_PARAM    = var.langfuse_keys_param_name
+      LANGFUSE_BASE_URL      = var.langfuse_base_url
     }
   }
 

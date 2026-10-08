@@ -4,6 +4,7 @@
 import { answerWith } from "./orchestrator/orchestrator.mjs";
 import { isCaptchaVerified } from "./captcha.mjs";
 import { sessions, rateLimit } from "./dynamo.mjs";
+import { flushTelemetry, startTelemetry, traceChatRequest } from "./telemetry.mjs";
 import { ChatError, getClientIp, isWellFormedCaptchaToken, parseRequestBody } from "./request.mjs";
 
 const HEARTBEAT_MS = 10_000;
@@ -45,9 +46,14 @@ async function ensureCaptchaVerified(sessionId, captchaToken, clientIp) {
 async function streamReply(message, sessionId, send) {
   const heartbeat = setInterval(() => send({ type: "ping" }), HEARTBEAT_MS);
   try {
-    for await (const chunk of answerWith(message, sessionId)) {
-      send(chunk);
-    }
+    await traceChatRequest({ sessionId, message }, async (span) => {
+      let reply = "";
+      for await (const chunk of answerWith(message, sessionId)) {
+        if (chunk.type === "token") reply += chunk.text;
+        send(chunk);
+      }
+      span.setAttribute("langfuse.observation.output", reply);
+    });
   } finally {
     clearInterval(heartbeat);
   }
@@ -78,12 +84,16 @@ export const handler = awslambda.streamifyResponse(
       }
 
       const { message, sessionId, captchaToken } = parseRequestBody(event);
+      await startTelemetry();
       await ensureCaptchaVerified(sessionId, captchaToken, clientIp);
       await streamReply(message, sessionId, send);
     } catch (err) {
       send(errorEventFor(err));
     } finally {
       send({ type: "done" });
+      // After "done": the visitor already has the whole answer, so the wait to
+      // push the traces out is invisible to them.
+      await flushTelemetry();
       stream.end();
     }
   }

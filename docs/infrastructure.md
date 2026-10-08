@@ -14,7 +14,7 @@ Le code d'infrastructure est situé dans le dossier `terraform/` :
 - `lambda.tf` : fonction Lambda `rr-djuikoo-chat`, URL de fonction et packaging.
 - `dynamodb.tf` : tables DynamoDB pour les sessions et le contrôle du débit.
 - `iam.tf` : rôles et politiques IAM pour la Lambda (accès Bedrock, SSM Parameter Store, S3 et tables DynamoDB).
-- `variables.tf` et `terraform.tfvars` : déclaration et valeurs des paramètres du projet (dont `turnstile_secret_param_name`).
+- `variables.tf` et `terraform.tfvars` : déclaration et valeurs des paramètres du projet (dont `turnstile_secret_param_name`, `langfuse_keys_param_name` et `langfuse_base_url`).
 - `acm.tf` et `route53.tf` : gestion du certificat TLS et des enregistrements DNS.
 - `monitoring.tf` : tableau de bord CloudWatch et alerte budgétaire mensuelle Bedrock.
 
@@ -22,7 +22,7 @@ Le code d'infrastructure est situé dans le dossier `terraform/` :
 
 ### 1. Gestion des dépendances de la Lambda (`agent.zip`)
 
-Le runtime AWS Lambda `nodejs22.x` ne contient pas les paquets `@strands-agents/sdk`, `zod` ou `tar`. Les dépendances sous `node_modules` doivent obligatoirement être incluses dans le fichier `agent.zip`.
+Le runtime AWS Lambda `nodejs22.x` ne contient pas les paquets `@strands-agents/sdk`, `@opentelemetry/*`, `zod` ou `tar`. Les dépendances sous `node_modules` doivent obligatoirement être incluses dans le fichier `agent.zip`.
 
 Afin de prévenir tout déploiement d'une archive incomplète, Terraform intègre une `precondition` dans `lambda.tf`. Celle-ci compare l'empreinte du fichier `agent/node_modules/.deps-stamp` avec le hachage SHA-256 de `agent/package-lock.json`. Le plan Terraform échoue automatiquement si les dépendances ne sont pas installées ou ne sont pas à jour.
 

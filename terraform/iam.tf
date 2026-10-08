@@ -142,6 +142,15 @@ data "aws_iam_policy_document" "chat" {
     ]
     resources = ["arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter${var.turnstile_secret_param_name}"]
   }
+
+  statement {
+    sid    = "ReadLangfuseKeys"
+    effect = "Allow"
+    actions = [
+      "ssm:GetParameter",
+    ]
+    resources = ["arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter${var.langfuse_keys_param_name}"]
+  }
 }
 
 resource "aws_iam_role_policy" "chat" {
