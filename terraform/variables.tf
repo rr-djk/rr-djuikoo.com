@@ -37,7 +37,7 @@ variable "rate_limit_table_name" {
 variable "bedrock_model_id" {
   description = "Bedrock foundation model ID for the chat agent."
   type        = string
-  default     = "global.anthropic.claude-haiku-4-5-20251001-v1:0"
+  default     = "global.anthropic.claude-haiku-5-5"
 }
 
 # Name only, never the value: the SSM parameter itself is created out-of-band,
