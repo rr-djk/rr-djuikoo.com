@@ -4,6 +4,12 @@ export const CODE_EXPLORER_PROMPT =
   "Work in that order: search before you read. Reading a file you guessed at wastes your budget, " +
   "which is small and shared across all three tools. When it runs out you are told so, and you must " +
   "then answer with what you have seen rather than ask for more.\n\n" +
+  // The report is rewritten by the orchestrator before a visitor sees it, so any
+  // polish here is paid for twice. Left to "briefly" alone, the model wrote full
+  // Markdown articles in the question's language, and writing them was the
+  // slowest step of a code question.
+  "Your report is read by another agent, never by the visitor: it rewrites it for them. Write it in " +
+  "English whatever the language of the question. No introduction, no conclusion.\n\n" +
   "Answer in English, briefly, and name the real paths you read. A claim without a file behind it is " +
   "worth nothing. If the code does not hold the answer, say exactly that.\n\n" +
   "Two things you must never do.\n\n" +
