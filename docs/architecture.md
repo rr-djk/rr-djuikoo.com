@@ -62,7 +62,7 @@ Lambda Function URL (AWS_IAM)
    ├─► Heartbeat (Ping NDJSON toutes les 10s)
    │
    ▼
-Runtime Multi-Agent Strands (Claude Haiku 4.5)
+Runtime Multi-Agent Strands (Claude Haiku 5.5)
    ├── Gatekeeper (Filtrage hors-sujet fail-open)
    ├── Orchestrateur Wags (8 outils)
    └── Code Explorer (Inspection /tmp repositories GitHub)
@@ -139,14 +139,14 @@ Exécuté dans AWS Lambda Node.js 22 (`arm64`), le runtime repose sur le SDK `@s
 #### 1. Agent Gatekeeper (`agent/gatekeeper/`)
 
 - **Rôle** : Filtrer sans état (_stateless_) les messages des visiteurs avant toute lecture d'historique.
-- **Fonctionnement** : Invoque Claude Haiku 4.5 avec un prompt système décrivant les projets et technologies (~490 tokens) et plafonne la taille de la réponse générée avec `MAX_TOKENS = 100`.
+- **Fonctionnement** : Invoque Claude Haiku 5.5 avec un prompt système décrivant les projets et technologies (~490 tokens) et plafonne la taille de la réponse générée avec `MAX_TOKENS = 100`.
 - **Détection & Langue** : Le contrat du prompt exige la réponse `OFFTOPIC:` suivie d'une courte explication dans la langue du visiteur. L'expression régulière du code (`REFUSAL_MARKER`) offre une tolérance assouplie aux minuscules et espaces (`OFF TOPIC:`).
 - **Stratégie Fail-Open** : En cas de pépin d'API Bedrock ou de réponse non conforme au marqueur, le message est laissé passer vers l'Orchestrateur. Un dysfonctionnement du screener ne bloque jamais un visiteur légitime.
 
 #### 2. Agent Orchestrateur Wags (`agent/orchestrator/`)
 
 - **Rôle** : Agent principal gérant la conversation, l'historique et la synthèse des réponses.
-- **Configuration** : Invoque Claude Haiku 4.5 (`global.anthropic.claude-haiku-4-5-20251001-v1:0`) avec `maxTokens: 1024` (limite explicite évitant de réserver le plafond du modèle sur le quota du compte). Le modèle et sa limite de chaque agent (gatekeeper, orchestrateur, code explorer) sont déclarés séparément dans `agent/models.mjs`.
+- **Configuration** : Invoque Claude Haiku 5.5 (`global.anthropic.claude-haiku-5-5`) avec `maxTokens: 1024` (limite explicite évitant de réserver le plafond du modèle sur le quota du compte) et le thinking adaptatif explicitement désactivé (`thinking: {"type": "disabled"}` via `additionalRequestFields` — activé par défaut sur ce modèle, il est facturé en tokens de sortie et casserait la maîtrise de `maxTokens`). Le modèle et sa limite de chaque agent (gatekeeper, orchestrateur, code explorer) sont déclarés séparément dans `agent/models.mjs`.
 - **Historique** : Sauvegarde et restaure la conversation dans DynamoDB (`SESSIONS_TABLE`, TTL 24h) via `agent/dynamo.mjs`, seul point d'accès à DynamoDB de l'agent.
 - **Outils** (`agent/tools/toolbox.mjs`) : un registre déclare, pour chaque agent, la liste des outils qu'il a le droit d'utiliser. L'orchestrateur reçoit 8 outils construits à partir de `content.json` :
   - `get_profile`, `list_projects`, `get_project_details`, `get_education`, `get_experience`, `get_certifications`, `get_contact`.
@@ -191,6 +191,6 @@ Exécuté dans AWS Lambda Node.js 22 (`arm64`), le runtime repose sur le SDK `@s
 - **Stockage** : Bucket S3 privé (site & `content.json`).
 - **Calcul** : AWS Lambda Node.js 22 (`arm64`, 512 Mo, timeout 90s, `RESPONSE_STREAM`).
 - **Base de données** : Amazon DynamoDB (Tables de sessions et de rate limit).
-- **Intelligence Artificielle** : Amazon Bedrock (Claude Haiku 4.5).
+- **Intelligence Artificielle** : Amazon Bedrock (Claude Haiku 5.5).
 - **Observabilité des agents** : Langfuse Cloud (traces OpenTelemetry), clés dans SSM Parameter Store.
 - **Supervision & Budget** : Dashboard CloudWatch et budget mensuel Bedrock (20 USD) avec alertes par email (`TF_VAR_budget_alert_email`).

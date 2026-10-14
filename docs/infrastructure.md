@@ -60,7 +60,7 @@ AWS S3 autorise une seule ressource `aws_s3_bucket_policy` par bucket. La politi
 
 ### 7. Autorisations IAM pour Amazon Bedrock
 
-L'accès au modèle Anthropic Claude Haiku 4.5 (`global.anthropic.claude-haiku-4-5-20251001-v1:0`) s'appuie sur trois déclarations IAM distinctes :
+L'accès au modèle Anthropic Claude Haiku 5.5 (`global.anthropic.claude-haiku-5-5`) s'appuie sur trois déclarations IAM distinctes :
 
 - Autorisation sur l'ARN du profil d'inférence global incluant l'identifiant du compte.
 - Autorisation sur le modèle de base régional.

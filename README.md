@@ -5,7 +5,7 @@ Portfolio personnel avec assistant virtuel multi-agent (Wags) intégré. Le site
 ## Fonctionnalités
 
 - Consultation du parcours professionnel, des projets et des certifications.
-- Panneau de chat interactif alimenté par une architecture multi-agent Wags (réponses streamées en NDJSON via Amazon Bedrock Claude Haiku 4.5).
+- Panneau de chat interactif alimenté par une architecture multi-agent Wags (réponses streamées en NDJSON via Amazon Bedrock Claude Haiku 5.5).
 - Filtrage intelligent des questions hors-sujet (_gatekeeper_) et exploration dynamique du code source des projets GitHub via un sous-agent dédié (_code explorer_).
 - Rendu riche en Markdown des réponses de l'agent (titres, listes, blocs de code, tableaux) sécurisé contre les XSS via sanitization HTML (`DOMPurify`).
 - Génération statique à partir d'une source de contenu unique (`src/profile.mjs`) et infrastructure as code Terraform.
@@ -21,7 +21,7 @@ Browser
                    ├── Cloudflare Siteverify (Validation 1er message)
                    ├── S3 (content.json - Cache TTL 5 min)
                    ├── Langfuse Cloud (Traces des agents)
-                   └── Multi-Agent Strands (Claude Haiku 4.5)
+                    └── Multi-Agent Strands (Claude Haiku 5.5)
                         ├── Gatekeeper (Filtre hors-sujet)
                         ├── Orchestrateur Wags (8 outils)
                         └── Code Explorer (Sub-agent GitHub /tmp)
