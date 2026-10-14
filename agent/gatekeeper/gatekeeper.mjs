@@ -31,6 +31,7 @@ const FALLBACK_REPLY =
 export async function refusalFor(message, sessionId, content) {
   const agent = new Agent({
     model,
+    name: AGENT_NAME,
     systemPrompt: gatekeeperPrompt(content),
     printer: false,
     traceAttributes: { "langfuse.session.id": sessionId },

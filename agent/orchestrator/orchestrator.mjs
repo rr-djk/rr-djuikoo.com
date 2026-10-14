@@ -46,6 +46,7 @@ export async function* answerWith(message, sessionId) {
     const history = await sessions.loadHistory(sessionId);
     const agent = new Agent({
         model,
+        name: AGENT_NAME,
         systemPrompt: ORCHESTRATOR_PROMPT,
         messages: history,
         // sessionId rides along so the sub-agent's token counts land on the
