@@ -27,6 +27,7 @@ export async function exploreRepo(root, question, sessionId) {
 
   const agent = new Agent({
     model,
+    name: AGENT_NAME,
     systemPrompt: CODE_EXPLORER_PROMPT,
     tools: toolbox.forAgent(AGENT_NAME, { root, budget }),
     printer: false,
