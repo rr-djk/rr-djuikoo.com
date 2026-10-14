@@ -85,7 +85,11 @@ export const DELEGATION_TOOLS = {
       "how a feature is implemented, what a module does. It reads code, it cannot say why a choice was made.",
     inputSchema: z.object({
       project_name: z.string().describe("Exact or partial project name, e.g. 'MyAm'"),
-      question: z.string().describe("The technical question to answer from the code"),
+      // The explorer answers in the language it is asked in, whatever its own
+      // prompt says, so the language has to be set here.
+      question: z
+        .string()
+        .describe("The technical question to answer from the code, written in English even when the visitor writes in another language"),
     }),
     callback: async ({ project_name, question }) => {
       const project = findProject(content.projects, project_name);
