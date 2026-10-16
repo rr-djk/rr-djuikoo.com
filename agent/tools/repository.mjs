@@ -6,8 +6,8 @@
 
 import { readdir, readFile, stat } from "node:fs/promises";
 import { relative, resolve, sep } from "node:path";
-
 import { z } from "zod";
+import { BUDGET_SPENT, TOOL_PROMPTS } from "./prompts.mjs";
 
 // Three budgets, one shared allowance. Bytes read is the one that bites: a 30 KB
 // file is roughly 8,000 tokens, and the context replays them on every later turn.
@@ -22,10 +22,6 @@ const EXPLORATION_MS = 45_000;
 const FILE_TRUNCATE_CHARS = 30 * 1024;
 const MAX_SEARCH_MATCHES = 40;
 const MAX_PATTERN_LENGTH = 200;
-
-const BUDGET_SPENT =
-  "Exploration budget spent. Answer now with what you have already seen, and say plainly " +
-  "which parts of the repository you did not get to look at.";
 
 /**
  * One exploration's allowance, shared by the three tools of that exploration.
@@ -86,9 +82,9 @@ async function* walk(dir) {
 
 export const REPOSITORY_TOOLS = budgeted({
   list_files: ({ root }) => ({
-    description: "List the files and directories at a path inside the repository. Use '.' for the root.",
+    description: TOOL_PROMPTS.list_files.description,
     inputSchema: z.object({
-      path: z.string().optional().describe("Directory path relative to the repository root"),
+      path: z.string().optional().describe(TOOL_PROMPTS.list_files.params.path),
     }),
     callback: async ({ path }) => {
       const target = inside(root, path);
@@ -110,9 +106,9 @@ export const REPOSITORY_TOOLS = budgeted({
   }),
 
   read_file: ({ root, budget }) => ({
-    description: "Read a source file from the repository. Large files come back truncated.",
+    description: TOOL_PROMPTS.read_file.description,
     inputSchema: z.object({
-      path: z.string().describe("File path relative to the repository root"),
+      path: z.string().describe(TOOL_PROMPTS.read_file.params.path),
     }),
     callback: async ({ path }) => {
       const target = inside(root, path);
@@ -134,12 +130,9 @@ export const REPOSITORY_TOOLS = budgeted({
   }),
 
   search_code: ({ root, budget }) => ({
-    description:
-      "Search the repository for plain text, ignoring case, and return the matching lines with their file and line number. " +
-      "Separate alternatives with '|' to match any of them. No regular expression syntax: '.', '*' or '\\s' are searched literally. " +
-      "Use this before read_file to find where something lives.",
+    description: TOOL_PROMPTS.search_code.description,
     inputSchema: z.object({
-      pattern: z.string().describe("Plain text, or alternatives separated by '|', e.g. 'jwt|token'"),
+      pattern: z.string().describe(TOOL_PROMPTS.search_code.params.pattern),
     }),
     callback: async ({ pattern }) => {
       if (pattern.length > MAX_PATTERN_LENGTH) return "That search pattern is too long.";

@@ -12,7 +12,8 @@ import { fileURLToPath } from "node:url";
 
 import { toolbox } from "../agent/tools/toolbox.mjs";
 import { createBudget } from "../agent/tools/repository.mjs";
-import { buildAttribution, formatExplorerReport, isForeignRepo } from "../agent/tools/ask_code_explorer.mjs";
+import { formatExplorerReport, isForeignRepo } from "../agent/tools/ask_code_explorer.mjs";
+import { buildAttribution } from "../agent/tools/prompts.mjs";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 
@@ -63,6 +64,18 @@ describe("les outils exposés", () => {
 
   it("refuse un agent sans accès déclaré", () => {
     assert.throws(() => toolbox.forAgent("inconnu", {}), /no tools granted/);
+  });
+
+  // The texts live in tools/prompts.mjs: a misspelt key gives undefined, which
+  // Strands turns into an empty description without any error.
+  it("chaque outil et chaque paramètre a une description", () => {
+    const allTools = [...tools, ...toolbox.forAgent("code_explorer", { root: ROOT, budget: createBudget() })];
+    for (const { toolSpec } of allTools) {
+      assert.ok(toolSpec.description, `${toolSpec.name} sans description`);
+      for (const [param, schema] of Object.entries(toolSpec.inputSchema.properties ?? {})) {
+        assert.ok(schema.description, `${toolSpec.name}.${param} sans description`);
+      }
+    }
   });
 });
 

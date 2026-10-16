@@ -2,24 +2,12 @@
 // Deliberately stateless: Every message is judged on its own.
 
 import { Agent } from "@strands-agents/sdk";
-import { gatekeeperPrompt } from "./prompts.mjs";
+import { FALLBACK_REPLY, gatekeeperPrompt, REFUSAL_MARKER } from "./prompts.mjs";
 import { logUsage } from "../usage.mjs";
 import { createModel, MODELS } from "../models.mjs";
 
 const AGENT_NAME = "gatekeeper";
 const model = createModel(AGENT_NAME);
-
-// The refusal sentence is written by the model so it lands in the visitor's own
-// language, the way the orchestrator answers everything else. The marker stays in
-// front of it: a reply that does not carry one is let through rather than shown,
-// so a garbled answer never reaches the visitor as if it were a refusal. Only the
-// spellings the model drifts to are tolerated - OFF TOPIC, off-topic, no colon.
-const REFUSAL_MARKER = /^off[\s_-]*topic\s*[:.-]?\s*/i;
-
-// Used only when the model emits the marker and nothing after it. Leaving the
-// bubble empty would read as a broken site rather than as a refusal.
-const FALLBACK_REPLY =
-  "I only answer questions about the background, projects and skills presented on this site.";
 
 /**
  * Screens a visitor message before it reaches the orchestrator.

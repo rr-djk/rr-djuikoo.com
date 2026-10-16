@@ -10,6 +10,7 @@ import { z } from "zod";
 
 import { fetchRepo, RepoError, resolveRepo } from "../code_explorer/repo.mjs";
 import { findProject, unknownProject } from "./portfolio.mjs";
+import { buildAttribution, TOOL_PROMPTS } from "./prompts.mjs";
 
 // The owner's GitHub account, read from the contact block rather than hardcoded:
 // it is what tells a repository he owns from one a team owns, and it follows
@@ -22,20 +23,6 @@ function ownerHandle(contact) {
 
 export function isForeignRepo(handle, owner) {
   return Boolean(handle && owner.toLowerCase() !== handle.toLowerCase());
-}
-
-/**
- * The ATTRIBUTION line handed back with the report. It rides on the tool result
- * rather than the system prompt so it sits in the model's immediate context when
- * it writes the answer, even deep into a long conversation.
- */
-export function buildAttribution({ ownerName, projectName, owner, foreign }) {
-  if (!foreign) return `ATTRIBUTION: this repository belongs to ${ownerName}'s own account.`;
-  return (
-    `ATTRIBUTION: this repository belongs to '${owner}', not to ${ownerName}. ` +
-    `It is a collaborative project. The code described above is the team's work. Present as his only what ` +
-    `the '${projectName}' entry credits to him, and say plainly that the project was built with others.`
-  );
 }
 
 /**
@@ -79,17 +66,10 @@ async function readProjectCode(project, question, sessionId, exploreRepo) {
 // close an import cycle.
 export const DELEGATION_TOOLS = {
   ask_code_explorer: ({ content, sessionId, exploreRepo }) => ({
-    description:
-      "Ask a sub-agent to read a project's public source code and report what it does. " +
-      "Use it only for a technical question the project entry cannot answer - which files exist, " +
-      "how a feature is implemented, what a module does. It reads code, it cannot say why a choice was made.",
+    description: TOOL_PROMPTS.ask_code_explorer.description,
     inputSchema: z.object({
-      project_name: z.string().describe("Exact or partial project name, e.g. 'MyAm'"),
-      // The explorer answers in the language it is asked in, whatever its own
-      // prompt says, so the language has to be set here.
-      question: z
-        .string()
-        .describe("The technical question to answer from the code, written in English even when the visitor writes in another language"),
+      project_name: z.string().describe(TOOL_PROMPTS.ask_code_explorer.params.project_name),
+      question: z.string().describe(TOOL_PROMPTS.ask_code_explorer.params.question),
     }),
     callback: async ({ project_name, question }) => {
       const project = findProject(content.projects, project_name);
