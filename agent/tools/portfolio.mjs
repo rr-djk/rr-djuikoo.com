@@ -3,6 +3,8 @@
 
 import { z } from "zod";
 
+import { TOOL_PROMPTS } from "./prompts.mjs";
+
 /**
  * Resolves a project by exact name first, then by partial name, ignoring case.
  * Shared by get_project_details and ask_code_explorer so one name never resolves
@@ -30,23 +32,23 @@ function filtered(items, query, textsOf, label) {
 
 export const PORTFOLIO_TOOLS = {
   get_profile: ({ content }) => ({
-    description: "Get the portfolio owner's identity (name, title, short bio) and the long-form about text.",
+    description: TOOL_PROMPTS.get_profile.description,
     inputSchema: z.object({}),
     callback: async () => JSON.stringify({ identity: content.identity, about: content.about }),
   }),
 
   list_projects: ({ content }) => ({
-    description: "List portfolio projects, optionally filtered by name or tech. Returns matching projects as JSON.",
+    description: TOOL_PROMPTS.list_projects.description,
     inputSchema: z.object({
-      query: z.string().optional().describe("Filter by name or tech, e.g. 'terraform' or 'aws'"),
+      query: z.string().optional().describe(TOOL_PROMPTS.list_projects.params.query),
     }),
     callback: async ({ query }) => filtered(content.projects, query, (p) => [p.name, ...p.tech], "projects"),
   }),
 
   get_project_details: ({ content }) => ({
-    description: "Get details for a single portfolio project by name.",
+    description: TOOL_PROMPTS.get_project_details.description,
     inputSchema: z.object({
-      project_name: z.string().describe("Exact or partial project name, e.g. 'rr-djuikoo.com'"),
+      project_name: z.string().describe(TOOL_PROMPTS.get_project_details.params.project_name),
     }),
     callback: async ({ project_name }) => {
       const match = findProject(content.projects, project_name);
@@ -55,29 +57,29 @@ export const PORTFOLIO_TOOLS = {
   }),
 
   get_education: ({ content }) => ({
-    description: "Get education history for the portfolio owner.",
+    description: TOOL_PROMPTS.get_education.description,
     inputSchema: z.object({}),
     callback: async () => JSON.stringify(content.education),
   }),
 
   get_experience: ({ content }) => ({
-    description: "Get work experience entries, optionally filtered by company.",
+    description: TOOL_PROMPTS.get_experience.description,
     inputSchema: z.object({
-      company: z.string().optional().describe("Filter by company name"),
+      company: z.string().optional().describe(TOOL_PROMPTS.get_experience.params.company),
     }),
     callback: async ({ company }) => filtered(content.experience, company, (e) => [e.org], "experience"),
   }),
 
   get_certifications: ({ content }) => ({
-    description: "Get certifications, optionally filtered by name.",
+    description: TOOL_PROMPTS.get_certifications.description,
     inputSchema: z.object({
-      name: z.string().optional().describe("Filter by certification name"),
+      name: z.string().optional().describe(TOOL_PROMPTS.get_certifications.params.name),
     }),
     callback: async ({ name }) => filtered(content.certifications, name, (c) => [c.name], "certifications"),
   }),
 
   get_contact: ({ content }) => ({
-    description: "Get contact information (email, LinkedIn, GitHub) for the portfolio owner.",
+    description: TOOL_PROMPTS.get_contact.description,
     inputSchema: z.object({}),
     callback: async () => JSON.stringify(content.contact),
   }),
